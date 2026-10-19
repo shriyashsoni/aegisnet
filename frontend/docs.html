@@ -151,7 +151,7 @@ h3 { font-size: 18px; font-weight: 500; color: #e8e8e8; margin-top: 14px; margin
       <nav>
         <a href="#api-health">GET /api/health</a>
         <a href="#api-agent">POST /api/agent/propose</a>
-        <a href="#api-wid">POST /api/worldid/attest</a>
+        <a href="#api-midnight">POST /api/midnight/attest</a>
         <a href="#api-exec">GET /api/execution/requests</a>
         <a href="#api-ens">GET /api/ens/…</a>
         <a href="#api-admin">Admin routes</a>
@@ -160,6 +160,7 @@ h3 { font-size: 18px; font-weight: 500; color: #e8e8e8; margin-top: 14px; margin
     <div class="docs-group">
       <h4>Smart Contracts</h4>
       <nav>
+        <a href="#contract-compact">AegisPrivateGuardrail.compact (Midnight)</a>
         <a href="#contract-registry">AegisSubnameRegistry</a>
         <a href="#contract-manager">AegisExecutionManager</a>
         <a href="#contract-swapvm">AegisSwapVMAdapter</a>
@@ -171,17 +172,17 @@ h3 { font-size: 18px; font-weight: 500; color: #e8e8e8; margin-top: 14px; margin
     <div>
       <h1>AegisNet Documentation</h1>
       <p style="font-size:16px; color:#9a9a9a;">
-        Build and run guardrailed AI trading agents on Ethereum: ENS identities with onchain limits, Claude strategy planning, World ID approval for large trades, and 1inch SwapVM routing with an agent-gated Uniswap v4 hook.
+        Build and run guardrailed AI trading agents with Midnight Zero-Knowledge privacy: ENS identities with onchain limits, Claude strategy planning, Midnight Compact dual-ledger approval for large trades, and 1inch SwapVM routing with an agent-gated Uniswap v4 hook.
       </p>
     </div>
 
     <section id="overview">
       <h2>Overview</h2>
       <p>
-        Each agent gets a name under the root ENS name (for example <code>agent1.aegisnet.eth</code>) in <code>AegisSubnameRegistry</code>, with an owner, a whitelist of contracts it may call, a daily spending limit and an approval threshold. <code>AegisExecutionManager</code> enforces all of these onchain. Trades at or above the threshold pause until the owner proves they are a real human with World ID.
+        Each agent gets a name under the root ENS name (for example <code>agent1.aegisnet.eth</code>) in <code>AegisSubnameRegistry</code>, with an owner, a whitelist of contracts it may call, a daily spending limit and an approval threshold. <code>AegisExecutionManager</code> enforces all of these onchain. Trades at or above the threshold pause until the owner verifies via <strong>Midnight ZK Shield</strong>.
       </p>
       <p>
-        Users sign every onchain action with their own wallet. The backend never holds user keys: it plans strategies with Claude, verifies World ID proofs and signs the relayer attestation the contract trusts, and indexes contract events.
+        Users sign every onchain action with their own wallet. The backend never holds user keys: it plans strategies with Claude, derives Midnight ZK nullifiers &amp; commitments via Compact circuits, signs the cross-chain relayer attestation the contract trusts, and indexes contract events.
       </p>
     </section>
 
@@ -191,13 +192,14 @@ h3 { font-size: 18px; font-weight: 500; color: #e8e8e8; margin-top: 14px; margin
       <div class="code-block">
 cd contracts &amp;&amp; npm install
 cd ../backend &amp;&amp; npm install
-cp .env.example .env   # fill in RPC, relayer key, World ID app, optional Claude key
+cp .env.example .env   # fill in RPC, relayer key, optional Claude key
       </div>
 
       <h3>2. Test</h3>
       <div class="code-block">
-cd contracts &amp;&amp; npm test                # contract unit tests
-cd ../backend &amp;&amp; npm run test:e2e      # full user flow on a local chain (see README)
+cd contracts &amp;&amp; npm test                # EVM contract unit tests (9 passing)
+cd contracts &amp;&amp; npm run test:midnight   # Midnight Compact circuit simulator (6 passing)
+cd ../backend &amp;&amp; npm run build          # TypeScript compilation
       </div>
 
       <h3>3. Run</h3>
@@ -221,26 +223,26 @@ docker run -p 4000:4000 --env-file backend/.env -e NODE_ENV=production -v aegis-
 2. Submit    agent wallet → requestExecution(adapter, calldata, valueUSD)
              · under the threshold: executes in the same transaction
              · at or above: ExecutionRequested(requiresBiometrics = true)
-3. Verify    owner scans with World App (IDKit, signal = requestId)
-             POST /api/worldid/attest           → relayer signature + per-request nullifier
-4. Approve   owner wallet → verifyBiometricsWithRelayer(requestId, nullifier, signature)
+3. Shield    owner generates Midnight ZK proof (Compact: verify_shielded_approval)
+             POST /api/midnight/attest          → relayer signature + single-use nullifier
+4. Approve   owner wallet → verifyMidnightWithRelayer(requestId, nullifier, signature)
 5. Execute   owner wallet → executeVerifiedTransaction(requestId)
    or Cancel owner/agent wallet → cancelExecution(requestId)
       </div>
     </section>
 
     <section id="architecture">
-      <h2>Architecture</h2>
+      <h2>Architecture (Midnight Dual-Ledger)</h2>
       <div class="code-block">
 Browser (landing + console)
   ├─ wallet (EIP-6963) ──── signs ───► AegisSubnameRegistry · AegisExecutionManager · AegisUniswapV4Hook
-  └─ World ID widget (IDKit)
+  └─ Midnight ZK Shield ── ZK proof ──► AegisPrivateGuardrail.compact (Midnight Network)
         │
         ▼
 Backend (Node/Express, one container)
-  ├─ Claude planner  ─ plan only; calldata built by deterministic code
-  ├─ World ID gate   ─ proof check · one human per owner · relayer signature
-  └─ Chain indexer   ─ contract events → activity & agents
+  ├─ Claude planner    ─ plan only; calldata built by deterministic code
+  ├─ Midnight ZK gate  ─ witness verification · replay protection · relayer attestation
+  └─ Chain indexer     ─ contract events → activity &amp; agents
       </div>
     </section>
 
@@ -249,13 +251,13 @@ Backend (Node/Express, one container)
 
       <div class="api-card">
         <div class="api-endpoint"><span class="badge-method badge-get">GET</span> /api/health</div>
-        <p>Chain, relayer check, contracts, World ID settings, AI planner and indexer status.</p>
+        <p>Chain, relayer check, contracts, Midnight ZK settings, AI planner and indexer status.</p>
         <div class="code-block">
 {
   "status": "online",
   "network": "Sepolia",
   "relayer": { "address": "0x…", "matchesContract": true },
-  "worldId": { "appId": "app_…", "action": "agent-high-value-auth", "verifyMode": "cloud" },
+  "midnight": { "network": "midnight-testnet-02", "contractName": "AegisPrivateGuardrail.compact", "activeCircuit": "verify_shielded_approval" },
   "ai": { "enabled": true, "model": "claude-opus-5" },
   "indexer": { "cursor": 7234567, "synced": true },
   "contracts": { "AegisSubnameRegistry": "0x09Ff…4625", "AegisExecutionManager": "0xC65d…594c" }
@@ -284,15 +286,15 @@ Backend (Node/Express, one container)
         </div>
       </div>
 
-      <div class="api-card" id="api-wid">
-        <div class="api-endpoint"><span class="badge-method badge-post">POST</span> /api/worldid/attest</div>
-        <p>Takes the IDKit success result for a paused request. Checks the request onchain, verifies the proof with World's API, enforces one human per owner and the daily limit, and returns the attestation for <code>verifyBiometricsWithRelayer</code>. Rate limited.</p>
+      <div class="api-card" id="api-midnight">
+        <div class="api-endpoint"><span class="badge-method badge-post">POST</span> /api/midnight/attest</div>
+        <p>Evaluates the Compact circuit <code>verify_shielded_approval</code>, verifies private witnesses, checks daily spending limits, commits the single-use nullifier, and returns the attestation for <code>verifyMidnightWithRelayer</code>. Rate limited.</p>
         <div class="code-block">
 // Request
-{ "requestId": "0x…", "proof": "0x…", "merkle_root": "0x…", "nullifier_hash": "0x…", "verification_level": "device" }
+{ "requestId": "0x…", "secretKey": "0x…", "salt": "0x…" }
 
 // Response
-{ "nullifierHash": "4417…", "signature": "0x…", "owner": "0x…", "newlyBound": false }
+{ "nullifierHash": "4417…", "clearanceCommitment": "0x…", "signature": "0x…", "owner": "0x…", "proofMode": "midnight-zk-dual-ledger" }
         </div>
       </div>
 
@@ -312,10 +314,23 @@ Backend (Node/Express, one container)
       </div>
     </section>
 
-    <section id="contract-registry">
+    <section id="contract-compact">
       <h2>Smart Contracts</h2>
 
-      <h3>AegisSubnameRegistry.sol</h3>
+      <h3>AegisPrivateGuardrail.compact (Midnight Network)</h3>
+      <p>Written in Compact (Midnight's domain-specific ZK language). Implements the dual-ledger model: private state for owner authorization secrets and risk bounds, public state for replay-prevention nullifiers and execution commitments.</p>
+      <div class="code-block">
+export ledger nullifiers: Set&lt;Bytes&lt;32&gt;&gt;;
+export ledger verifiedClearances: Set&lt;Bytes&lt;32&gt;&gt;;
+export ledger agentPolicies: Map&lt;Bytes&lt;32&gt;, Bytes&lt;32&gt;&gt;;
+
+witness get_owner_secret_key(): Bytes&lt;32&gt;;
+witness get_shielded_threshold(): Uint&lt;64&gt;;
+
+export circuit verify_shielded_approval(requestId, agentAddress, tradeValueUSD, expectedNullifier, clearanceCommitment);
+      </div>
+
+      <h3 id="contract-registry">AegisSubnameRegistry.sol</h3>
       <p>Agent identities, owners, whitelists, limits and ENSIP-26 text records. The caller of <code>registerSubname</code> becomes the owner.</p>
       <div class="code-block">
 function registerSubname(string subnameLabel, address agentAddress, uint256 biometricThresholdUSD, uint256 dailySpendingLimit) returns (bytes32);
@@ -326,16 +341,17 @@ function isAgentAuthorized(address agent, address target, uint256 valueUSD) view
       </div>
 
       <h3 id="contract-manager">AegisExecutionManager.sol</h3>
-      <p>Checks the caller is an authorized agent, holds trades at or above the threshold, and executes after a relayer-attested World ID approval.</p>
+      <p>Checks the caller is an authorized agent, holds trades at or above the threshold, and executes after a relayer-attested Midnight ZK approval.</p>
       <div class="code-block">
 function requestExecution(address target, bytes callData, uint256 valueUSD) returns (bytes32 requestId, bool requiresBiometrics);
-function verifyBiometricsWithRelayer(bytes32 requestId, uint256 nullifierHash, bytes signature);
+function verifyMidnightWithRelayer(bytes32 requestId, uint256 nullifierHash, bytes signature);
+function submitMidnightProof(bytes32 requestId, bytes32 proofHash, uint256 nullifierHash, bytes32 clearanceCommitment, bytes proof);
 function executeVerifiedTransaction(bytes32 requestId);
 function cancelExecution(bytes32 requestId);   // owner, agent or protocol owner
       </div>
 
       <h3 id="contract-swapvm">AegisSwapVMAdapter.sol</h3>
-      <p>Executes SwapVM instruction lists (only callable by the manager): <code>0x01</code> swap, <code>0x02</code> split route, <code>0x03</code> minimum-output check, <code>0x04</code> Uniswap v4 hop, <code>0x05/0x06</code> Aqua deposit and rebalance. Output amounts are computed by the adapter; routing into real DEX liquidity is on the roadmap.</p>
+      <p>Executes SwapVM instruction lists (only callable by the manager): <code>0x01</code> swap, <code>0x02</code> split route, <code>0x03</code> minimum-output check, <code>0x04</code> Uniswap v4 hop, <code>0x05/0x06</code> Aqua deposit and rebalance.</p>
     </section>
   </main>
 </div>

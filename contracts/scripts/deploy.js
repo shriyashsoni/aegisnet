@@ -20,22 +20,22 @@ async function main() {
   const registryAddr = await registry.getAddress();
   console.log(`> AegisSubnameRegistry deployed at: ${registryAddr}`);
 
-  // 2. MockWorldID / WorldID
-  console.log("2. Deploying MockWorldID Verifier...");
-  const WorldID = await ethers.getContractFactory("MockWorldID");
-  const worldID = await WorldID.deploy();
-  await worldID.waitForDeployment();
-  const worldIdAddr = await worldID.getAddress();
-  console.log(`> MockWorldID deployed at: ${worldIdAddr}`);
+  // 2. MockMidnightVerifier
+  console.log("2. Deploying MockMidnightVerifier...");
+  const MidnightVerifier = await ethers.getContractFactory("MockMidnightVerifier");
+  const midnightVerifier = await MidnightVerifier.deploy();
+  await midnightVerifier.waitForDeployment();
+  const midnightVerifierAddr = await midnightVerifier.getAddress();
+  console.log(`> MockMidnightVerifier deployed at: ${midnightVerifierAddr}`);
 
   // 3. AegisExecutionManager
   console.log("3. Deploying AegisExecutionManager...");
   const Manager = await ethers.getContractFactory("AegisExecutionManager");
   const manager = await Manager.deploy(
     registryAddr,
-    worldIdAddr,
-    worldIdGroupId,
-    externalNullifier,
+    midnightVerifierAddr,
+    1, // Midnight Network ID
+    1, // External Nullifier
     deployer.address // Relayer signer
   );
   await manager.waitForDeployment();
@@ -65,7 +65,8 @@ async function main() {
     deployer: deployer.address,
     contracts: {
       AegisSubnameRegistry: registryAddr,
-      WorldIDVerifier: worldIdAddr,
+      MidnightVerifier: midnightVerifierAddr,
+      WorldIDVerifier: midnightVerifierAddr, // Backward-compatible alias
       AegisExecutionManager: managerAddr,
       AegisSwapVMAdapter: swapVMAddr,
       AegisUniswapV4Hook: hookAddr,

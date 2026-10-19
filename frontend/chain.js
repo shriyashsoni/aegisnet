@@ -157,7 +157,10 @@
 
   async function submitApproval(requestId, nullifierHash, signature, onStatus) {
     var manager = contract('manager', await signer());
-    return send('Record World ID approval', function () {
+    return send('Record Midnight ZK approval', function () {
+      if (typeof manager.verifyMidnightWithRelayer === 'function') {
+        return manager.verifyMidnightWithRelayer(requestId, BigInt(nullifierHash), signature);
+      }
       return manager.verifyBiometricsWithRelayer(requestId, BigInt(nullifierHash), signature);
     }, onStatus);
   }

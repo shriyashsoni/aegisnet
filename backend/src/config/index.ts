@@ -82,4 +82,14 @@ export const config = {
   indexerStartBlock: process.env.INDEXER_START_BLOCK ? parseInt(process.env.INDEXER_START_BLOCK, 10) : deployedStartBlock,
   dataDir: process.env.DATA_DIR || path.resolve(__dirname, '../../data'),
   contracts: contractAddresses,
+  midnight: {
+    network: process.env.MIDNIGHT_NETWORK || 'testnet',
+    indexerUri: process.env.MIDNIGHT_INDEXER_URI || 'https://indexer.testnet.midnight.network/api/v1/graphql',
+    nodeUri: process.env.MIDNIGHT_NODE_URI || 'https://rpc.testnet.midnight.network',
+    proofServerUri: process.env.MIDNIGHT_PROOF_SERVER_URI || 'http://127.0.0.1:6300',
+    seedPhrase: realValue(process.env.MIDNIGHT_SEED_PHRASE),
+    contractAddress: process.env.MIDNIGHT_CONTRACT_ADDRESS || 'mn1b674e6ce8752d612b2f05047a69164d7dca0a996',
+    circuit: process.env.MIDNIGHT_CIRCUIT || 'verify_shielded_approval',
+    proofMode: process.env.MIDNIGHT_PROOF_MODE || 'midnight-zk-dual-ledger',
+  },
 };

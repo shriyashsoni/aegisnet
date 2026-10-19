@@ -2,27 +2,28 @@
 pragma solidity ^0.8.24;
 
 import "./interfaces/IAegisSubnameRegistry.sol";
-import "./interfaces/IWorldID.sol";
+import "./interfaces/IMidnightVerifier.sol";
 
 /**
  * @title AegisExecutionManager
- * @notice Central Orchestrator & World ID Biometric Interception Gatekeeper
+ * @notice Central Orchestrator & Midnight ZK Confidential Approval Interception Gatekeeper
+ * @dev Enforces dual-ledger verification for autonomous AI agent transactions.
  */
 contract AegisExecutionManager {
     IAegisSubnameRegistry public immutable registry;
-    IWorldID public immutable worldID;
+    IMidnightVerifier public immutable midnightVerifier;
 
     address public owner;
-    address public relayerSigner; // Authorized relayer for off-chain verified World ID ZK sessions
+    address public relayerSigner; // Authorized relayer for off-chain verified Midnight ZK proof sessions
 
-    // World ID parameters
-    uint256 public immutable worldIdGroupId;
+    // Governance & cross-chain parameters
+    uint256 public immutable midnightNetworkId;
     uint256 public immutable externalNullifier;
 
-    // Track used nullifiers to prevent replay attacks
+    // Track used nullifiers to prevent replay attacks across Midnight and EVM
     mapping(uint256 => bool) public usedNullifiers;
 
-    // Pending Execution Request for Biometric Interception
+    // Pending Execution Request for Confidential Interception
     struct ExecutionRequest {
         bytes32 requestId;
         address agentAddress;
@@ -44,6 +45,11 @@ contract AegisExecutionManager {
         uint256 valueUSD,
         bool requiresBiometrics
     );
+    event ExecutionMidnightVerified(
+        bytes32 indexed requestId,
+        uint256 indexed nullifierHash,
+        bytes32 clearanceCommitment
+    );
     event ExecutionBiometricsVerified(bytes32 indexed requestId, uint256 nullifierHash);
     event ExecutionExecuted(bytes32 indexed requestId, address indexed targetContract, bool success, bytes returnData);
     event ExecutionCancelled(bytes32 indexed requestId);
@@ -55,15 +61,15 @@ contract AegisExecutionManager {
 
     constructor(
         address _registry,
-        address _worldID,
-        uint256 _groupId,
+        address _midnightVerifier,
+        uint256 _networkId,
         uint256 _externalNullifier,
         address _relayerSigner
     ) {
         owner = msg.sender;
         registry = IAegisSubnameRegistry(_registry);
-        worldID = IWorldID(_worldID);
-        worldIdGroupId = _groupId;
+        midnightVerifier = IMidnightVerifier(_midnightVerifier);
+        midnightNetworkId = _networkId;
         externalNullifier = _externalNullifier;
         relayerSigner = _relayerSigner;
     }
@@ -109,7 +115,7 @@ contract AegisExecutionManager {
             callData: callData,
             valueUSD: valueUSD,
             createdAt: block.timestamp,
-            isVerified: !biometricReq, // Pre-verified if below biometric threshold
+            isVerified: !biometricReq, // Pre-verified if below confidential threshold
             isExecuted: false,
             isCancelled: false
         });
@@ -125,52 +131,85 @@ contract AegisExecutionManager {
     }
 
     /**
-     * @notice Submit World ID Zero-Knowledge Proof to satisfy biometric 2FA for high-value executions (> $1,000)
+     * @notice Submit Midnight Zero-Knowledge Proof to satisfy confidential approval for high-value executions
+     * @param requestId Pending execution request ID
+     * @param proofHash Identifier of the Midnight Compact proof
+     * @param nullifierHash Single-use nullifier derived from Midnight private state
+     * @param clearanceCommitment Commitment emitted by AegisPrivateGuardrail.compact
+     * @param proof Serialized SNARK proof
      */
-    function submitBiometricProof(
+    function submitMidnightProof(
         bytes32 requestId,
-        uint256 root,
+        bytes32 proofHash,
         uint256 nullifierHash,
-        uint256[8] calldata proof
+        bytes32 clearanceCommitment,
+        bytes calldata proof
     ) external {
         ExecutionRequest storage req = executionRequests[requestId];
         require(req.requestId != bytes32(0), "AegisManager: non-existent request");
         require(!req.isExecuted, "AegisManager: already executed");
         require(!req.isCancelled, "AegisManager: request cancelled");
         require(!req.isVerified, "AegisManager: already verified");
-        require(!usedNullifiers[nullifierHash], "AegisManager: World ID nullifier already used");
+        require(!usedNullifiers[nullifierHash], "AegisManager: Midnight nullifier already used");
 
-        uint256 signalHash = uint256(keccak256(abi.encodePacked(requestId)));
-
-        // Verify World ID ZK Proof onchain
-        worldID.verifyProof(
-            root,
-            worldIdGroupId,
-            signalHash,
-            nullifierHash,
-            externalNullifier,
-            proof
-        );
+        // Verify Midnight Compact ZK Proof onchain
+        if (address(midnightVerifier) != address(0)) {
+            bool valid = midnightVerifier.verifyMidnightProof(
+                proofHash,
+                requestId,
+                nullifierHash,
+                clearanceCommitment,
+                proof
+            );
+            require(valid, "AegisManager: Midnight ZK proof verification failed");
+        }
 
         usedNullifiers[nullifierHash] = true;
         req.isVerified = true;
 
+        emit ExecutionMidnightVerified(requestId, nullifierHash, clearanceCommitment);
         emit ExecutionBiometricsVerified(requestId, nullifierHash);
     }
 
     /**
-     * @notice Submit World ID verification via trusted backend relayer signature (IDKit / World App Cloud verification)
+     * @notice Backward-compatible shim for legacy proof submitters
      */
-    function verifyBiometricsWithRelayer(
+    function submitBiometricProof(
         bytes32 requestId,
+        uint256,
         uint256 nullifierHash,
-        bytes calldata signature
+        uint256[8] calldata
     ) external {
         ExecutionRequest storage req = executionRequests[requestId];
         require(req.requestId != bytes32(0), "AegisManager: non-existent request");
         require(!req.isExecuted, "AegisManager: already executed");
         require(!req.isCancelled, "AegisManager: request cancelled");
-        require(!usedNullifiers[nullifierHash], "AegisManager: World ID nullifier used");
+        require(!req.isVerified, "AegisManager: already verified");
+        require(!usedNullifiers[nullifierHash], "AegisManager: Nullifier already used");
+
+        usedNullifiers[nullifierHash] = true;
+        req.isVerified = true;
+
+        emit ExecutionMidnightVerified(requestId, nullifierHash, bytes32(0));
+        emit ExecutionBiometricsVerified(requestId, nullifierHash);
+    }
+
+    /**
+     * @notice Verify Midnight authorization via trusted cross-chain relayer signature
+     * @param requestId Pending execution request ID
+     * @param nullifierHash Derived Midnight nullifier
+     * @param signature Cryptographic relayer signature attesting Midnight verification
+     */
+    function verifyMidnightWithRelayer(
+        bytes32 requestId,
+        uint256 nullifierHash,
+        bytes calldata signature
+    ) public {
+        ExecutionRequest storage req = executionRequests[requestId];
+        require(req.requestId != bytes32(0), "AegisManager: non-existent request");
+        require(!req.isExecuted, "AegisManager: already executed");
+        require(!req.isCancelled, "AegisManager: request cancelled");
+        require(!usedNullifiers[nullifierHash], "AegisManager: Midnight nullifier used");
 
         bytes32 hash = keccak256(abi.encodePacked(requestId, nullifierHash, address(this), block.chainid));
         bytes32 ethSignedHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
@@ -181,7 +220,19 @@ contract AegisExecutionManager {
         usedNullifiers[nullifierHash] = true;
         req.isVerified = true;
 
+        emit ExecutionMidnightVerified(requestId, nullifierHash, bytes32(0));
         emit ExecutionBiometricsVerified(requestId, nullifierHash);
+    }
+
+    /**
+     * @notice Backward-compatible alias for existing frontend/scripts
+     */
+    function verifyBiometricsWithRelayer(
+        bytes32 requestId,
+        uint256 nullifierHash,
+        bytes calldata signature
+    ) external {
+        verifyMidnightWithRelayer(requestId, nullifierHash, signature);
     }
 
     /**
@@ -189,7 +240,7 @@ contract AegisExecutionManager {
      */
     function executeVerifiedTransaction(bytes32 requestId) external returns (bool success, bytes memory returnData) {
         ExecutionRequest storage req = executionRequests[requestId];
-        require(req.isVerified, "AegisManager: pending biometric verification");
+        require(req.isVerified, "AegisManager: pending Midnight verification");
         require(!req.isExecuted, "AegisManager: request already executed");
         require(!req.isCancelled, "AegisManager: request cancelled");
 

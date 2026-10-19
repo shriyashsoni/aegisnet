@@ -12,7 +12,8 @@ import { indexer } from './services/indexer.service';
 import { claudePlanner } from './services/claudePlanner.service';
 import agentRoutes from './routes/agent.routes';
 import ensRoutes from './routes/ens.routes';
-import worldidRoutes from './routes/worldid.routes';
+import midnightRoutes from './routes/midnight.routes';
+import { midnightService } from './services/midnight.service';
 import executionRoutes from './routes/execution.routes';
 import uniswapRoutes from './routes/uniswap.routes';
 
@@ -76,12 +77,7 @@ app.get('/api/health', async (_req, res) => {
     biometricThresholdUSD: config.biometricDefaultThresholdUSD,
     relayer: { address: signerAddress, matchesContract: checks.relayerOk, onchain: checks.relayerOnchain },
     hookOwner: checks.hookOwner,
-    worldId: {
-      appId: config.worldIdAppId,
-      action: config.worldIdAction,
-      verifyMode: config.worldIdVerifyMode,
-      verificationLevel: config.worldIdVerificationLevel,
-    },
+    midnight: midnightService.networkConfig(),
     ai: { enabled: claudePlanner.enabled, model: claudePlanner.enabled ? claudePlanner.model : null },
     oneInchQuotes: Boolean(config.oneInchApiKey),
     adminRoutes: config.adminApiKey ? 'api-key' : config.isProduction ? 'disabled' : 'open (development)',
@@ -101,7 +97,8 @@ app.get('/api/abis', (_req, res) => {
 // ---------------------------------------------------------------------------
 app.use('/api/agent', agentRoutes);
 app.use('/api/ens', ensRoutes);
-app.use('/api/worldid', worldidRoutes);
+app.use('/api/midnight', midnightRoutes);
+app.use('/api/worldid', midnightRoutes); // Backward-compatibility alias
 app.use('/api/execution', executionRoutes);
 app.use('/api/uniswap', uniswapRoutes);
 
@@ -137,12 +134,9 @@ app.listen(config.port, config.host, () => {
   console.log(`🛡️  AegisNet listening on ${config.host}:${config.port} (${config.env})`);
   console.log(`🖥️  App:     http://localhost:${config.port}`);
   console.log(`🌐 Health:  http://localhost:${config.port}/api/health`);
-  console.log(`🔏 Relayer: ${signerAddress}`);
-  console.log(`🔐 World ID: ${config.worldIdVerifyMode} mode · ${config.worldIdVerificationLevel} level`);
-  console.log(`🤖 Claude:  ${claudePlanner.enabled ? claudePlanner.model : 'off (set ANTHROPIC_API_KEY)'}`);
-  if (config.worldIdVerifyMode === 'dev' && config.isProduction) {
-    console.warn('⚠ WORLD_ID_VERIFY_MODE=dev in production: proofs are NOT checked. Do not use this for real users.');
-  }
+  console.log(`🔏 Relayer:  ${signerAddress}`);
+  console.log(`🌑 Midnight: Dual-Ledger ZK Shield active (${midnightService.networkConfig().contractName})`);
+  console.log(`🤖 Claude:   ${claudePlanner.enabled ? claudePlanner.model : 'off (set ANTHROPIC_API_KEY)'}`);
   console.log(`=======================================================`);
   runChecks();
   indexer.start();

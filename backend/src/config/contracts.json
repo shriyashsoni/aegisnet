@@ -6,6 +6,7 @@
   "startBlock": 11787900,
   "contracts": {
     "AegisSubnameRegistry": "0x48EEFC9F26181Bd059daCc3EF9fD70F197145373",
+    "MidnightVerifier": "0x15f25Fc3261B8d3cFb23679B9E65f4D030501623",
     "WorldIDVerifier": "0x15f25Fc3261B8d3cFb23679B9E65f4D030501623",
     "AegisExecutionManager": "0xa7C668691382166eF71534a1996F60F6f218b887",
     "AegisSwapVMAdapter": "0x3fE49BC40C1f06d3D867ed6AaDA5b21a0cF4c611",

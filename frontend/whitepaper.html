@@ -162,7 +162,7 @@ p { margin-bottom: 16px; color: #cccccc; }
     <h4>Contents</h4>
     <a href="#abstract">1. Abstract & Problem</a>
     <a href="#identity">2. ENSv2 EAC Identity</a>
-    <a href="#biometrics">3. World ID Biometrics</a>
+    <a href="#midnight">3. Midnight Network ZK Shield</a>
     <a href="#swapvm">4. 1inch SwapVM Routing</a>
     <a href="#uniswap">5. Uniswap v4 Hook</a>
     <a href="#math">6. Cryptographic Formalisms</a>
@@ -173,16 +173,16 @@ p { margin-bottom: 16px; color: #cccccc; }
   <main class="wp-content">
     <div>
       <div class="wp-meta">
-        <span>📄 Protocol Specification v1.0.4</span>
+        <span>📄 Protocol Specification v1.1.0</span>
         <span>•</span>
-        <span>Published September 2026</span>
+        <span>Published October 2026</span>
         <span>•</span>
-        <span>AegisNet Research Group</span>
+        <span>AegisNet Research Group · Midnight Buildathon</span>
       </div>
 
       <h1>Operational AI Infrastructure & <em>Autonomous DeFi Safeguards</em></h1>
       <p style="font-size:17px; color:#e0e0e0; margin-top:12px;">
-        A technical architecture unifying autonomous AI agent execution with ENSv2 Hierarchical Identity, Zero-Knowledge World ID Biometric 2FA, 1inch SwapVM Opcode Positioning, and Uniswap v4 Agent-Gated Liquidity.
+        A technical architecture unifying autonomous AI agent execution with ENSv2 Hierarchical Identity, Midnight Network Zero-Knowledge Confidential Clearance, 1inch SwapVM Opcode Positioning, and Uniswap v4 Agent-Gated Liquidity.
       </p>
     </div>
 
@@ -197,11 +197,11 @@ p { margin-bottom: 16px; color: #cccccc; }
         <ol style="margin-left: 20px; line-height: 1.8;">
           <li><strong>Key Compromise Risk:</strong> Exposing private keys to autonomous agent loops risks catastrophic loss of capital if the model is exploited or prompt-injected.</li>
           <li><strong>Absence of Verifiable Human Intent:</strong> Onchain smart contracts cannot natively distinguish between an autonomous routine check and a high-stakes unauthorized drain.</li>
-          <li><strong>Fragmented DeFi Execution:</strong> Traditional DEX interfaces require manual multi-step transactions, incompatible with microsecond multi-hop agent strategy execution.</li>
+          <li><strong>Zero Financial Privacy:</strong> Public EVM mempools leak agent trading strategies, stop-loss limits, and spending balances to MEV sandwichers and front-runners.</li>
         </ol>
       </div>
       <p>
-        <strong>AegisNet</strong> solve this trilemma by introducing a zero-friction, multi-layer security matrix. Agents are assigned granular, revocable identity subnames under root ENS namespaces (`agent1.aegisnet.eth`), restricted by contract-level Enhanced Access Control (EAC), and gated by Zero-Knowledge World ID biometric 2FA whenever transaction values exceed configurable thresholds (e.g. $1,000 USD).
+        <strong>AegisNet</strong> solves this trilemma by introducing a zero-friction, multi-layer security matrix. Agents are assigned granular, revocable identity subnames under root ENS namespaces (<code>agent1.aegisnet.eth</code>), restricted by contract-level Enhanced Access Control (EAC), and shielded by <strong>Midnight Network Zero-Knowledge Dual-Ledger Governance</strong> whenever transaction values exceed configurable thresholds (e.g. $1,000 USD).
       </p>
     </section>
 
@@ -215,7 +215,7 @@ p { margin-bottom: 16px; color: #cccccc; }
         Each subname is linked to an <code>AgentPermissions</code> record containing strict onchain parameters:
       </p>
       <ul style="margin-left: 24px; margin-bottom: 16px; color:#cccccc;">
-        <li><code>biometricThresholdUSD</code>: Dollar threshold (in 18-decimal precision) triggering mandatory biometric verification.</li>
+        <li><code>biometricThresholdUSD</code>: Dollar threshold (in 18-decimal precision) triggering mandatory zero-knowledge clearance.</li>
         <li><code>dailySpendingLimit</code>: Aggregated 24-hour spending cap.</li>
         <li><code>whitelistedTargets</code>: Approved target contract routers (e.g., 1inch SwapVM Router, Uniswap v4 Pools).</li>
         <li><code>textRecords</code>: ENSIP-26 key-value pairs defining <code>agent.capabilities</code> and operational metadata.</li>
@@ -237,20 +237,24 @@ struct AgentPermissions {
     </section>
 
     <!-- Section 3 -->
-    <section id="biometrics">
-      <h2>3. World ID Zero-Knowledge Biometric Interception</h2>
+    <section id="midnight">
+      <h2>3. Midnight Network Zero-Knowledge Dual-Ledger Interception</h2>
       <p>
         When an agent requests execution via <code>AegisExecutionManager.sol</code>, the contract evaluates the transaction value against the agent's threshold. If <code>valueUSD &gt;= biometricThresholdUSD</code>, the transaction is intercepted and placed into a pending state.
       </p>
+      <p>
+        Unlike public EVM checks that leak private risk boundaries, AegisNet leverages **Midnight Network's Compact smart contracts** (<code>AegisPrivateGuardrail.compact</code>) implementing a true dual-ledger model:
+      </p>
       <div class="callout callout-info">
-        <div class="callout-title">🔒 Biometric Interception Flow</div>
+        <div class="callout-title">🌑 Midnight ZK Interception & Settlement Flow</div>
         <p>
-          1. Agent submits proposed transaction payload.<br>
+          1. Agent submits proposed transaction payload to <code>requestExecution()</code>.<br>
           2. Contract emits <code>ExecutionRequested(requestId, requiresBiometrics = true)</code>.<br>
-          3. Operator scans World ID QR code or biometric prompt (Orb / Selfie Check).<br>
-          4. Zero-knowledge proof (Semaphore protocol) is generated with <code>signal = requestId</code>.<br>
-          5. Proof is verified onchain via <code>IWorldID.verifyProof()</code> or signed by an authorized relayer.<br>
-          6. Transaction transitions to <code>isVerified = true</code> and executes automatically.
+          3. Operator initiates approval in client-side wallet, fetching private witness inputs: <code>ownerSecretKey</code> and <code>shieldedThreshold</code>.<br>
+          4. Zero-knowledge proof is generated via Compact circuit <code>verify_shielded_approval</code>.<br>
+          5. Single-use nullifier <code>persistentHash([secretKey, requestId, salt])</code> is committed to Midnight public state to prevent replay attacks.<br>
+          6. Cross-chain relayer attestation unlocks <code>verifyMidnightWithRelayer()</code> or on-chain verifier <code>submitMidnightProof()</code>.<br>
+          7. Transaction executes atomically on Sepolia via 1inch SwapVM / Uniswap v4 Hook.
         </p>
       </div>
     </section>

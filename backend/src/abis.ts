@@ -23,7 +23,9 @@ export const RegistryABI = [
 
 export const ManagerABI = [
   'function requestExecution(address targetContract, bytes callData, uint256 valueUSD) returns (bytes32 requestId, bool requiresBiometrics)',
+  'function verifyMidnightWithRelayer(bytes32 requestId, uint256 nullifierHash, bytes signature)',
   'function verifyBiometricsWithRelayer(bytes32 requestId, uint256 nullifierHash, bytes signature)',
+  'function submitMidnightProof(bytes32 requestId, bytes32 proofHash, uint256 nullifierHash, bytes32 clearanceCommitment, bytes proof)',
   'function executeVerifiedTransaction(bytes32 requestId) returns (bool success, bytes returnData)',
   'function cancelExecution(bytes32 requestId)',
   'function executionRequests(bytes32) view returns (bytes32 requestId, address agentAddress, address targetContract, bytes callData, uint256 valueUSD, uint256 createdAt, bool isVerified, bool isExecuted, bool isCancelled)',
@@ -31,6 +33,7 @@ export const ManagerABI = [
   'function relayerSigner() view returns (address)',
   'function owner() view returns (address)',
   'event ExecutionRequested(bytes32 indexed requestId, address indexed agent, address indexed targetContract, uint256 valueUSD, bool requiresBiometrics)',
+  'event ExecutionMidnightVerified(bytes32 indexed requestId, uint256 indexed nullifierHash, bytes32 clearanceCommitment)',
   'event ExecutionBiometricsVerified(bytes32 indexed requestId, uint256 nullifierHash)',
   'event ExecutionExecuted(bytes32 indexed requestId, address indexed targetContract, bool success, bytes returnData)',
   'event ExecutionCancelled(bytes32 indexed requestId)',

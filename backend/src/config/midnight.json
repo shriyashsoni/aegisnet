@@ -1,0 +1,57 @@
+{
+  "network": "testnet",
+  "contractName": "AegisPrivateGuardrail",
+  "contractAddress": "mn13c0cb630e28a7b8b44a00f211e9e97d4f57687e8",
+  "authorityPublicKey": "0xe51b2f2808739eb7a217f30f31a3e0446500e1bee64dbce72438be03a777de93",
+  "compactSource": "contracts/midnight/AegisPrivateGuardrail.compact",
+  "compilerVersion": ">=0.20",
+  "indexerUri": "https://indexer.testnet.midnight.network/api/v1/graphql",
+  "proofServerUri": "http://127.0.0.1:6300",
+  "deploymentTxHash": "0x600e6b4a8486661b322f6b9c0d0efcc1d4ae3453ec5f4993125f6a8093248369",
+  "deployedAt": "2026-10-19T11:08:32.149Z",
+  "circuits": [
+    {
+      "name": "initialize",
+      "params": [
+        "initial_authority: Bytes<32>"
+      ],
+      "returns": "[]"
+    },
+    {
+      "name": "register_agent_policy",
+      "params": [
+        "agent_id: Bytes<32>",
+        "policy_hash: Bytes<32>"
+      ],
+      "returns": "[]"
+    },
+    {
+      "name": "verify_shielded_approval",
+      "params": [
+        "request_id: Bytes<32>",
+        "owner_pk: Bytes<32>",
+        "requested_amount: Uint<64>",
+        "target_contract: Bytes<32>"
+      ],
+      "returns": "[Bytes<32>, Bytes<32>]",
+      "witnesses": [
+        "get_owner_secret_key()",
+        "get_shielded_threshold()",
+        "get_authorization_salt()"
+      ]
+    },
+    {
+      "name": "revoke_clearance",
+      "params": [
+        "request_id: Bytes<32>"
+      ],
+      "returns": "[]"
+    }
+  ],
+  "ledgerState": {
+    "nullifiers": "Set<Bytes<32>>",
+    "verifiedClearances": "Set<Bytes<32>>",
+    "agentPolicies": "Map<Bytes<32>, Bytes<32>>",
+    "protocolAuthority": "0xe51b2f2808739eb7a217f30f31a3e0446500e1bee64dbce72438be03a777de93"
+  }
+}

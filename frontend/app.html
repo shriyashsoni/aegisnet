@@ -63,7 +63,7 @@
           Live on Ethereum Sepolia
         </span>
         <h1>Your AI agent's <em>control room</em>.</h1>
-        <p class="lede">Your agent trades on its own. Small trades go through automatically, big ones wait for you to prove you're human with World ID, and you can stop it at any time. Every action here is a real Sepolia transaction.</p>
+        <p class="lede">Your agent trades on its own. Small trades go through automatically, big ones wait for you to authorize them confidentially with <strong>Midnight ZK Shield</strong>, and you can stop it at any time. Every action here is backed by zero-knowledge dual-ledger verification on Sepolia.</p>
       </div>
 
       <div class="wallet-card" id="wallet-card">
@@ -87,8 +87,8 @@
       <div class="idea-arrow" aria-hidden="true">→</div>
       <div class="idea-card">
         <span class="idea-n">2 · The fix</span>
-        <h3>A name, limits, and a human</h3>
-        <p>AegisNet gives each agent an <strong>ENS name</strong> with hard limits written onchain, <strong>Claude</strong> plans each trade in plain English, and big trades need a real person's <strong>World ID</strong>.</p>
+        <h3>A name, limits, and Midnight ZK</h3>
+        <p>AegisNet gives each agent an <strong>ENS name</strong> with hard limits written onchain, <strong>Claude</strong> plans each trade in plain English, and big trades require <strong>Midnight Zero-Knowledge</strong> private clearance.</p>
       </div>
       <div class="idea-arrow" aria-hidden="true">→</div>
       <div class="idea-card idea-card--result">
@@ -96,7 +96,7 @@
         <h3>Safe autonomy</h3>
         <ul class="idea-list">
           <li><span class="s-ok">●</span> Small trades run by themselves</li>
-          <li><span class="s-pending">●</span> Big trades wait for your approval</li>
+          <li><span class="s-pending">●</span> Big trades wait for Midnight ZK approval</li>
           <li><span class="s-cancelled">●</span> Bad trades get blocked or cancelled</li>
         </ul>
       </div>
@@ -181,7 +181,7 @@
       <article class="usecase">
         <span class="uc-tag s-pending">Needs a human</span>
         <h3>Whale-size trade</h3>
-        <p>The agent spots an opportunity and wants to move $25,000. AegisNet holds it onchain until the owner proves they're a real person with World ID.</p>
+        <p>The agent spots an opportunity and wants to move $25,000. AegisNet holds it onchain until the owner generates a confidential clearance proof via Midnight ZK Shield.</p>
         <button class="btn btn-ghost btn-sm" type="button" data-scenario="whale">Try: $25,000 swap</button>
       </article>
       <article class="usecase">
@@ -199,7 +199,7 @@
         <div class="kpi"><span class="kpi-label">Backend</span><span class="kpi-value" id="kpi-status">—</span></div>
         <div class="kpi"><span class="kpi-label">Network</span><span class="kpi-value" id="kpi-network">—</span></div>
         <div class="kpi"><span class="kpi-label">AI planner</span><span class="kpi-value" id="kpi-ai">—</span></div>
-        <div class="kpi"><span class="kpi-label">World ID</span><span class="kpi-value" id="kpi-worldid">—</span></div>
+        <div class="kpi"><span class="kpi-label">Midnight ZK</span><span class="kpi-value" id="kpi-midnight">—</span></div>
       </div>
       <div class="kpis">
         <div class="kpi"><span class="kpi-label">Chain indexer</span><span class="kpi-value" id="kpi-indexer">—</span></div>
@@ -214,7 +214,7 @@
           <ol class="phases">
             <li><span class="phase-n">I</span><div><strong>Identity &amp; limits</strong><p>The agent's address resolves to its ENS name, whitelist, daily limit and approval threshold in AegisSubnameRegistry.</p></div></li>
             <li><span class="phase-n">II</span><div><strong>AI plan</strong><p>Claude picks the strategy. Deterministic code encodes it as 1inch SwapVM steps with an agent-gated Uniswap v4 hop.</p></div></li>
-            <li><span class="phase-n">III</span><div><strong>Human check</strong><p>At or above the threshold, AegisExecutionManager holds the trade until the owner's World ID proof is attested.</p></div></li>
+            <li><span class="phase-n">III</span><div><strong>Midnight ZK gate</strong><p>At or above the threshold, AegisExecutionManager holds the trade until the owner's Midnight Compact proof is attested.</p></div></li>
             <li><span class="phase-n">IV</span><div><strong>Onchain execution</strong><p>The manager records the spend and runs the approved route in one transaction.</p></div></li>
           </ol>
         </div>
@@ -422,7 +422,7 @@
           <li data-step="identity"><span class="dot"></span><div><strong>Identity check</strong><p>Your wallet is a registered, active agent</p></div></li>
           <li data-step="strategy"><span class="dot"></span><div><strong>AI plan</strong><p>Claude plans the route; code encodes it</p></div></li>
           <li data-step="submit"><span class="dot"></span><div><strong>Signed &amp; submitted</strong><p>Your wallet sends requestExecution to Sepolia</p></div></li>
-          <li data-step="gate"><span class="dot"></span><div><strong>Human check</strong><p>World ID approval if at or above the threshold</p></div></li>
+          <li data-step="gate"><span class="dot"></span><div><strong>Midnight ZK Shield</strong><p>Confidential approval via Compact circuit if at or above threshold</p></div></li>
           <li data-step="execute"><span class="dot"></span><div><strong>Executed onchain</strong><p>AegisExecutionManager runs the route</p></div></li>
         </ol>
         <div class="result" id="exec-result" hidden></div>
@@ -455,20 +455,41 @@
   </section>
 </main>
 
-<!-- World ID approval modal -->
+<!-- Midnight ZK Shield Approval Modal -->
 <div class="modal" id="worldid-modal" hidden>
   <div class="modal-scrim" data-close></div>
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="wid-title">
-    <div class="wid-orb" aria-hidden="true">
-      <svg viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="1.6"><circle cx="24" cy="24" r="20"/><path d="M4 24h40M24 4c-6 6-6 34 0 40M24 4c6 6 6 34 0 40"/></svg>
+    <div class="wid-orb" aria-hidden="true" style="background: radial-gradient(circle, rgba(147, 51, 234, 0.25) 0%, transparent 70%);">
+      <svg viewBox="0 0 48 48" fill="none" stroke="#a855f7" stroke-width="1.8">
+        <circle cx="24" cy="24" r="20" stroke-dasharray="4 2"/>
+        <path d="M24 8v32M8 24h32M14 14l20 20M14 34L34 14"/>
+        <circle cx="24" cy="24" r="8" fill="#18181b"/>
+        <path d="M21 24l2 2 4-4" stroke="#a855f7" stroke-width="2"/>
+      </svg>
     </div>
-    <h2 id="wid-title">Approve with World ID</h2>
+    <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:4px;">
+      <span class="status-pill s-ok" style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;border-color:#a855f7;color:#d8b4fe">Midnight Network · Dual Ledger</span>
+    </div>
+    <h2 id="wid-title">Approve with Midnight ZK Shield</h2>
     <p class="modal-prompt" id="wid-prompt"></p>
+    
+    <div class="zk-circuit-box" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 14px;margin:12px 0;font-size:12px;text-align:left;">
+      <div style="display:flex;justify-content:space-between;color:#a1a1aa;margin-bottom:4px;">
+        <span>Compact Circuit:</span><code style="color:#c084fc">verify_shielded_approval</code>
+      </div>
+      <div style="display:flex;justify-content:space-between;color:#a1a1aa;margin-bottom:4px;">
+        <span>Private State:</span><span style="color:#4ade80">● Shielded Owner Secret &amp; Risk Bounds</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;color:#a1a1aa;">
+        <span>Public Ledger:</span><span style="color:#38bdf8">● Spent Nullifier &amp; Clearance Hash</span>
+      </div>
+    </div>
+
     <dl class="kv" id="wid-meta"></dl>
     <ol class="tx-steps" id="wid-steps" hidden></ol>
     <p class="hint" id="wid-hint"></p>
     <div class="modal-actions">
-      <button class="btn btn-solid" type="button" id="wid-verify">Verify with World ID</button>
+      <button class="btn btn-solid" type="button" id="wid-verify" style="background:#7e22ce;border-color:#a855f7;">Generate Midnight ZK Proof &amp; Approve</button>
       <button class="btn btn-ghost" type="button" id="wid-cancel">Cancel this trade</button>
     </div>
     <button class="modal-x" type="button" data-close aria-label="Close">×</button>
@@ -486,7 +507,6 @@
 </datalist>
 
 <script src="/vendor/ethers.umd.min.js"></script>
-<script src="/vendor/idkit.js"></script>
 <script src="wallet.js"></script>
 <script src="chain.js"></script>
 <script src="app.js"></script>

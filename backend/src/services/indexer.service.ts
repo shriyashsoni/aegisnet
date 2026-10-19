@@ -263,6 +263,7 @@ export class IndexerService {
         });
         break;
       }
+      case 'ExecutionMidnightVerified':
       case 'ExecutionBiometricsVerified':
         this.patch(a.requestId, { status: 'BIOMETRICS_VERIFIED', verificationTxHash: log.transactionHash, updatedAt: at });
         break;

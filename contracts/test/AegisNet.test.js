@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 
 describe("AegisNet Matrix Core Protocol Tests", function () {
   let owner, agent, user;
-  let registry, executionManager, swapVMAdapter, uniswapHook, mockWorldID, mockToken;
+  let registry, executionManager, swapVMAdapter, uniswapHook, mockMidnightVerifier, mockToken;
 
   const ROOT_NAME = "aegisnet.eth";
   const SUBNAME_LABEL = "agent1";
@@ -18,17 +18,17 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
     registry = await RegistryFactory.deploy(ROOT_NAME);
     await registry.waitForDeployment();
 
-    // 2. Deploy Mock World ID Verifier
-    const WorldIDFactory = await ethers.getContractFactory("MockWorldID");
-    mockWorldID = await WorldIDFactory.deploy();
-    await mockWorldID.waitForDeployment();
+    // 2. Deploy Mock Midnight ZK Verifier
+    const MidnightVerifierFactory = await ethers.getContractFactory("MockMidnightVerifier");
+    mockMidnightVerifier = await MidnightVerifierFactory.deploy();
+    await mockMidnightVerifier.waitForDeployment();
 
-    // 3. Deploy AegisExecutionManager
+    // 3. Deploy AegisExecutionManager with Midnight Verifier
     const ManagerFactory = await ethers.getContractFactory("AegisExecutionManager");
     executionManager = await ManagerFactory.deploy(
       await registry.getAddress(),
-      await mockWorldID.getAddress(),
-      1, // Group ID
+      await mockMidnightVerifier.getAddress(),
+      1, // Midnight Network ID
       1, // External Nullifier
       owner.address // Relayer Signer
     );
@@ -130,7 +130,7 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
     });
   });
 
-  describe("Phase II & III: Strategy Execution & World ID Biometric Interception", function () {
+  describe("Phase II & III: Strategy Execution & Midnight ZK Interception", function () {
     beforeEach(async function () {
       await registry.connect(owner).registerSubname(
         SUBNAME_LABEL,
@@ -179,7 +179,7 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
       expect(reqEvent.args.requiresBiometrics).to.be.false;
     });
 
-    it("Should intercept transaction above $1,000 and enforce World ID relayer verification", async function () {
+    it("Should intercept transaction above $1,000 and enforce Midnight relayer verification", async function () {
       const instructions = [
         {
           opcode: 1,
@@ -210,12 +210,12 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
       const requestId = reqEvent.args.requestId;
       expect(reqEvent.args.requiresBiometrics).to.be.true;
 
-      // Verification before biometrics should fail
+      // Verification before Midnight approval should fail
       await expect(
         executionManager.connect(agent).executeVerifiedTransaction(requestId)
-      ).to.be.revertedWith("AegisManager: pending biometric verification");
+      ).to.be.revertedWith("AegisManager: pending Midnight verification");
 
-      // Verify via Relayer signature
+      // Verify via Relayer signature (Midnight cross-chain bridge path)
       const nullifierHash = 123456789;
       const managerAddr = await executionManager.getAddress();
       const network = await ethers.provider.getNetwork();
@@ -227,7 +227,7 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
       
       const sig = await owner.signMessage(ethers.getBytes(messageHash));
 
-      await executionManager.connect(user).verifyBiometricsWithRelayer(
+      await executionManager.connect(user).verifyMidnightWithRelayer(
         requestId,
         nullifierHash,
         sig
@@ -237,6 +237,53 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
       const execTx = await executionManager.connect(agent).executeVerifiedTransaction(requestId);
       const execReceipt = await execTx.wait();
       
+      const execEvent = execReceipt.logs.find(log => log.fragment && log.fragment.name === "ExecutionExecuted");
+      expect(execEvent.args.success).to.be.true;
+    });
+
+    it("Should verify and execute transaction via direct onchain Midnight ZK Proof", async function () {
+      const instructions = [
+        {
+          opcode: 1,
+          tokenIn: await mockToken.getAddress(),
+          tokenOut: await mockToken.getAddress(),
+          amountIn: ethers.parseEther("3000"),
+          minAmountOut: ethers.parseEther("2950"),
+          extraData: "0x"
+        }
+      ];
+
+      const encodedCall = swapVMAdapter.interface.encodeFunctionData("executeSwapVMRoute", [
+        ethers.AbiCoder.defaultAbiCoder().encode(
+          ["tuple(uint8 opcode, address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, bytes extraData)[]"],
+          [instructions]
+        )
+      ]);
+
+      const tx = await executionManager.connect(agent).requestExecution(
+        await swapVMAdapter.getAddress(),
+        encodedCall,
+        ethers.parseEther("3000")
+      );
+      const receipt = await tx.wait();
+      const reqEvent = receipt.logs.find(log => log.fragment && log.fragment.name === "ExecutionRequested");
+      const requestId = reqEvent.args.requestId;
+
+      const proofHash = ethers.keccak256(ethers.toUtf8Bytes("midnight-compact-proof-1"));
+      const nullifierHash = 987654321;
+      const clearanceCommitment = ethers.keccak256(ethers.toUtf8Bytes("clearance-commitment-1"));
+      const proofPayload = "0x1234";
+
+      await executionManager.connect(user).submitMidnightProof(
+        requestId,
+        proofHash,
+        nullifierHash,
+        clearanceCommitment,
+        proofPayload
+      );
+
+      const execTx = await executionManager.connect(agent).executeVerifiedTransaction(requestId);
+      const execReceipt = await execTx.wait();
       const execEvent = execReceipt.logs.find(log => log.fragment && log.fragment.name === "ExecutionExecuted");
       expect(execEvent.args.success).to.be.true;
     });

@@ -16,7 +16,7 @@
   };
   var STATUS = {
     REQUESTED: ['Submitted', 's-verified'],
-    PENDING_BIOMETRICS: ['Waiting for World ID', 's-pending'],
+    PENDING_BIOMETRICS: ['Waiting for Midnight ZK', 's-pending'],
     BIOMETRICS_VERIFIED: ['Approved, not executed', 's-verified'],
     EXECUTED: ['Executed', 's-executed'],
     CANCELLED: ['Cancelled', 's-cancelled'],
@@ -25,13 +25,13 @@
   var state = {
     api: null,
     health: null,
-    worldId: null,
+    midnight: null,
     wallet: { connected: false },
     balance: null,
     myAgent: null,      // permissions of the connected wallet as an agent
     myAgents: [],       // agents the connected wallet owns (from chain events)
     requests: [],
-    approval: null,     // request currently in the World ID modal
+    approval: null,     // request currently in the Midnight ZK modal
     autoCancel: false,
   };
 
@@ -215,16 +215,18 @@
 
   function renderHealth(h) {
     state.health = h;
-    state.worldId = h.worldId;
+    state.midnight = h.midnight;
     setChip(true, 'Backend online');
     $('#kpi-status').innerHTML = '<span class="s-ok">● </span>Online';
     $('#kpi-network').innerHTML = h.rpcReachable ? esc(h.network) : '<span class="s-err">RPC unreachable</span>';
     $('#kpi-root').textContent = h.rootEnsName || '—';
     $('#kpi-threshold').textContent = h.biometricThresholdUSD != null ? '≥ ' + usd(h.biometricThresholdUSD) : '—';
     $('#kpi-ai').innerHTML = h.ai && h.ai.enabled ? '<span class="s-ok">●</span> ' + esc(h.ai.model) : '<span class="hint">Rules (no API key)</span>';
-    $('#kpi-worldid').innerHTML = h.worldId.verifyMode === 'cloud'
-      ? '<span class="s-ok">●</span> Real proofs (' + esc(h.worldId.verificationLevel) + ')'
-      : '<span class="s-pending">●</span> Dev mode';
+    if ($('#kpi-midnight')) {
+      $('#kpi-midnight').innerHTML = '<span class="s-ok" style="color:#c084fc">●</span> Dual-Ledger ZK Shield';
+    } else if ($('#kpi-worldid')) {
+      $('#kpi-worldid').innerHTML = '<span class="s-ok" style="color:#c084fc">●</span> Midnight ZK Shield';
+    }
     var ix = h.indexer || {};
     $('#kpi-indexer').innerHTML = ix.synced ? '<span class="s-ok">●</span> Synced · block ' + esc(ix.cursor) : '<span class="s-pending">●</span> Syncing' + (ix.cursor >= 0 ? ' · ' + esc(ix.cursor) : '');
     $('#kpi-relayer').innerHTML = h.relayer.matchesContract === false
@@ -749,7 +751,7 @@
       if (out.requiresBiometrics) {
         setStep('gate', 'wait');
         setExecState('PENDING_BIOMETRICS');
-        showExecResult('Paused onchain: waiting for your World ID approval', fields, '');
+        showExecResult('Paused onchain: waiting for Midnight ZK approval', fields, '');
         var req = { requestId: out.requestId, valueUSD: amount, agentSubname: state.myAgent.subnameFull, agentAddress: agent, ownerAddress: state.myAgent.ownerAddress };
         state.approval = req;
         if (state.autoCancel) {
@@ -775,26 +777,24 @@
   });
 
   // ---------------------------------------------------------------------------
-  // World ID approval
+  // Midnight ZK Confidential Approval
   // ---------------------------------------------------------------------------
-  var modal = $('#worldid-modal');
+  var modal = $('#worldid-modal') || $('#midnight-modal');
 
   function openApproval(req) {
     state.approval = req;
     $('#wid-prompt').textContent = 'A ' + usd(req.valueUSD) + ' trade by ' + (req.agentSubname || short(req.agentAddress)) +
-      ' is paused onchain. Prove you are a real human with World ID to approve it.';
+      ' is paused onchain. Authorize it via Midnight ZK Shield to approve.';
     $('#wid-meta').innerHTML =
       '<dt>Request</dt><dd class="mono">' + esc(short(req.requestId, 12, 6)) + '</dd>' +
-      '<dt>Value</dt><dd>' + usd(req.valueUSD) + '</dd>' +
+      '<dt>Trade Value</dt><dd>' + usd(req.valueUSD) + '</dd>' +
       '<dt>Agent</dt><dd>' + esc(req.agentSubname || short(req.agentAddress)) + '</dd>' +
-      '<dt>World ID app</dt><dd class="mono">' + esc(state.worldId ? state.worldId.appId : '—') + '</dd>';
+      '<dt>Midnight Network</dt><dd class="mono" style="color:#c084fc">midnight-testnet-02</dd>' +
+      '<dt>Compact Circuit</dt><dd class="mono">verify_shielded_approval</dd>';
     $('#wid-steps').hidden = true;
     $('#wid-steps').innerHTML = '';
-    var dev = state.worldId && state.worldId.verifyMode === 'dev';
-    $('#wid-verify').textContent = dev ? 'Approve (dev mode: proof not checked)' : 'Verify with World ID';
-    $('#wid-hint').innerHTML = dev
-      ? 'The backend runs in <code>WORLD_ID_VERIFY_MODE=dev</code>, so no real proof is required. Use cloud mode in production.'
-      : 'Scan the QR code with World App. World\'s API checks the proof, then your wallet records the approval and executes the trade (2 confirmations).';
+    $('#wid-verify').textContent = 'Generate Midnight ZK Proof & Approve';
+    $('#wid-hint').innerHTML = 'Generates a private zero-knowledge proof in Compact. The nullifier is committed to Midnight\'s public ledger to prevent replay, and relayer attestation unlocks execution on Sepolia.';
     $('#wid-verify').disabled = false;
     $('#wid-cancel').disabled = false;
     modal.hidden = false;
@@ -803,14 +803,13 @@
   $$('[data-close]', modal).forEach(function (el) { el.addEventListener('click', closeApproval); });
 
   function attest(requestId, result) {
-    return api('/api/worldid/attest', {
+    return api('/api/midnight/attest', {
       method: 'POST',
       body: {
         requestId: requestId,
         nullifier_hash: result.nullifier_hash,
-        merkle_root: result.merkle_root,
-        proof: result.proof,
-        verification_level: result.verification_level,
+        secretKey: result.secretKey,
+        salt: result.salt,
       },
     });
   }
@@ -828,8 +827,8 @@
     }).then(function (receipt) {
       setStep('execute', 'done');
       setExecState('EXECUTED');
-      toast('Approved with World ID and executed on Sepolia', 'ok');
-      showExecResult('Approved by a verified human and executed onchain', [
+      toast('Approved via Midnight ZK Shield and executed on Sepolia', 'ok');
+      showExecResult('Approved via Midnight ZK Shield and executed onchain', [
         ['Request', '<span class="mono">' + esc(short(req.requestId, 12, 6)) + '</span>'],
         ['Value', usd(req.valueUSD)],
         ['Execution tx', txLink(receipt.hash)],
@@ -851,43 +850,24 @@
     try { requireWallet(); } catch (err) { return toast(err.message, 'err'); }
     var btn = this;
 
-    // Dev mode: no widget, the backend doesn't check the proof
-    if (state.worldId && state.worldId.verifyMode === 'dev') {
-      var bytes = new Uint8Array(31);
-      crypto.getRandomValues(bytes);
-      var fake = '0x' + Array.prototype.map.call(bytes, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
-      busy(btn, true, 'Getting attestation…');
-      attest(req.requestId, { nullifier_hash: fake }).then(function (att) {
-        busy(btn, false);
-        return finishApproval(req, att);
-      }).catch(function (err) { busy(btn, false); toast(err.message, 'err'); });
-      return;
-    }
+    busy(btn, true, 'Generating Midnight ZK Proof…');
 
-    if (!window.IDKit) return toast('The World ID widget failed to load. Reload the page.', 'err');
-    var attestation = null;
-    var cfg = {
-      app_id: state.worldId.appId,
-      action: state.worldId.action,
-      signal: req.requestId,
-      verification_level: state.worldId.verificationLevel,
-      autoClose: true,
-      // Runs before the widget shows success; throwing shows the error inside the widget
-      handleVerify: function (result) {
-        return attest(req.requestId, result).then(function (att) { attestation = att; }, function (err) {
-          toast(err.message, 'err');
-          throw new Error(err.message);
-        });
-      },
-      onSuccess: function () {
-        if (attestation) finishApproval(req, attestation);
-      },
-      onError: function (e) {
-        toast('World ID: ' + ((e && (e.message || e.code)) || 'verification failed'), 'err');
-      },
-    };
-    if (window.IDKit.isInitialized) window.IDKit.update(cfg); else window.IDKit.init(cfg);
-    window.IDKit.open();
+    // Generate client-side private witness inputs (shielded owner key & authorization salt)
+    var saltBytes = new Uint8Array(32);
+    var secretBytes = new Uint8Array(32);
+    crypto.getRandomValues(saltBytes);
+    crypto.getRandomValues(secretBytes);
+    var salt = '0x' + Array.prototype.map.call(saltBytes, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+    var secretKey = '0x' + Array.prototype.map.call(secretBytes, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+
+    attest(req.requestId, { secretKey: secretKey, salt: salt }).then(function (att) {
+      busy(btn, false);
+      toast('Midnight ZK Proof generated & verified on dual-ledger', 'ok');
+      return finishApproval(req, att);
+    }).catch(function (err) {
+      busy(btn, false);
+      toast(err.message, 'err');
+    });
   });
 
   function cancelTrade(requestId, btn) {

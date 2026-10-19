@@ -31,17 +31,17 @@ async function main() {
   const registryAddr = await registry.getAddress();
   console.log(`> AegisSubnameRegistry deployed at: ${registryAddr}`);
 
-  // 2. World ID Verifier (Uses official Sepolia World ID Router or deploys MockWorldID)
-  let worldIdAddr = worldIdSepoliaRouter;
-  if (process.env.USE_MOCK_WORLD_ID === "true" || !worldIdSepoliaRouter) {
-    console.log("\n2. Deploying MockWorldID Verifier...");
-    const WorldID = await ethers.getContractFactory("MockWorldID");
-    const worldID = await WorldID.deploy();
-    await worldID.waitForDeployment();
-    worldIdAddr = await worldID.getAddress();
-    console.log(`> MockWorldID deployed at: ${worldIdAddr}`);
+  // 2. Midnight ZK Verifier
+  let midnightVerifierAddr = process.env.CONTRACT_MIDNIGHT_VERIFIER;
+  if (!midnightVerifierAddr) {
+    console.log("\n2. Deploying MockMidnightVerifier on Sepolia...");
+    const MidnightVerifier = await ethers.getContractFactory("MockMidnightVerifier");
+    const midnightVerifier = await MidnightVerifier.deploy();
+    await midnightVerifier.waitForDeployment();
+    midnightVerifierAddr = await midnightVerifier.getAddress();
+    console.log(`> MockMidnightVerifier deployed at: ${midnightVerifierAddr}`);
   } else {
-    console.log(`\n2. Using Official Sepolia World ID Router at: ${worldIdAddr}`);
+    console.log(`\n2. Using Existing Midnight Verifier at: ${midnightVerifierAddr}`);
   }
 
   // 3. AegisExecutionManager
@@ -49,9 +49,9 @@ async function main() {
   const Manager = await ethers.getContractFactory("AegisExecutionManager");
   const manager = await Manager.deploy(
     registryAddr,
-    worldIdAddr,
-    worldIdGroupId,
-    externalNullifier,
+    midnightVerifierAddr,
+    1, // Midnight Network ID
+    1, // External Nullifier
     deployer.address // Relayer signer
   );
   await manager.waitForDeployment();
@@ -83,7 +83,8 @@ async function main() {
     deployer: deployer.address,
     contracts: {
       AegisSubnameRegistry: registryAddr,
-      WorldIDVerifier: worldIdAddr,
+      MidnightVerifier: midnightVerifierAddr,
+      WorldIDVerifier: midnightVerifierAddr, // Backward-compatible alias
       AegisExecutionManager: managerAddr,
       AegisSwapVMAdapter: swapVMAddr,
       AegisUniswapV4Hook: hookAddr,

@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "compile": "hardhat compile",
-    "test": "hardhat test",
+    "test": "hardhat test --network hardhat",
+    "test:midnight": "mocha midnight/test/AegisPrivateGuardrail.test.js",
+    "deploy:midnight": "node midnight/scripts/deploy-midnight.js",
     "deploy": "hardhat run scripts/deploy.js",
     "deploy:sepolia": "hardhat run scripts/deploy-sepolia.js",
     "demo": "hardhat run scripts/execute-sepolia-demo.js"
