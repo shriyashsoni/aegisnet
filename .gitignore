@@ -1,0 +1,29 @@
+# Secrets & Environment Configurations
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+*.pem
+*.key
+*secrets*
+*secret*
+midnight-bindings.json
+**/midnight-bindings.json
+worldid-bindings.json
+**/worldid-bindings.json
+
+# Dependencies & builds
+node_modules/
+**/node_modules/
+backend/dist/
+contracts/artifacts/
+contracts/cache/
+
+# Runtime data (chain index, World ID bindings)
+backend/data/
+
+# Local backups & logs
+frontend-backup/
+*.log
