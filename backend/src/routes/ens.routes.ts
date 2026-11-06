@@ -135,6 +135,34 @@ router.get(
 );
 
 /**
+ * GET /api/ens/resolve/:name
+ * Forward resolution: Resolves an ENS subname (e.g. agent1.aegisnet.eth) to its live permissions and ENSIP-26 text records
+ */
+router.get(
+  '/resolve/:name',
+  route(async (req, res) => {
+    const name = requireString(req.params.name, 'name', { max: 128 });
+    const resolved = await ensService.resolveName(name);
+    if (!resolved) throw new HttpError(404, `Subname '${name}' not found or inactive`);
+    res.json({ success: true, ...resolved });
+  })
+);
+
+/**
+ * GET /api/ens/lookup/:address
+ * Reverse resolution: Looks up an agent address to find its bound ENS subname and metadata
+ */
+router.get(
+  '/lookup/:address',
+  route(async (req, res) => {
+    const address = requireAddress(req.params.address, 'address');
+    const resolved = await ensService.lookupAddress(address);
+    if (!resolved) throw new HttpError(404, `No active ENS subname registered for address ${address}`);
+    res.json({ success: true, ...resolved });
+  })
+);
+
+/**
  * GET /api/ens/agents?owner=0x…&agent=0x…
  * Agents registered on AegisSubnameRegistry, read from chain events
  */

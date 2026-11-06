@@ -127,4 +127,75 @@ export class ENSService {
   async getTextRecord(subnameNode: string, key: string): Promise<string> {
     return await this.registryContract.getTextRecord(subnameNode, key);
   }
+
+  async getRootNode(): Promise<string> {
+    try {
+      return await this.registryContract.rootNode();
+    } catch {
+      return ethers.keccak256(
+        ethers.solidityPacked(
+          ['bytes32', 'bytes32'],
+          [ethers.ZeroHash, ethers.keccak256(ethers.toUtf8Bytes(config.rootEnsName))]
+        )
+      );
+    }
+  }
+
+  async calculateNode(label: string): Promise<string> {
+    const rootNode = await this.getRootNode();
+    const labelHash = ethers.keccak256(ethers.toUtf8Bytes(label));
+    return ethers.keccak256(ethers.solidityPacked(['bytes32', 'bytes32'], [rootNode, labelHash]));
+  }
+
+  async resolveName(fullName: string) {
+    const root = config.rootEnsName.toLowerCase();
+    const cleanName = fullName.toLowerCase().trim();
+    let label = cleanName;
+    if (cleanName.endsWith(`.${root}`)) {
+      label = cleanName.slice(0, -(root.length + 1));
+    }
+    const node = await this.calculateNode(label);
+    const perm = await this.getPermissionsByNode(node);
+    if (!perm) return null;
+
+    const textKeys = [
+      'agent.capabilities',
+      'agent.biometric_threshold',
+      'agent.operator',
+      'agent.proof_of_ownership',
+      'agent.storage_root',
+      'agent.specification',
+    ];
+    const textRecords: Record<string, string> = {};
+    for (const key of textKeys) {
+      try {
+        const val = await this.getTextRecord(node, key);
+        if (val) textRecords[key] = val;
+      } catch {}
+    }
+
+    const uniswapWhitelisted = await this.isTargetWhitelisted(node, config.contracts.AegisUniswapAdapter);
+
+    return {
+      subnameFull: `${label}.${root}`,
+      label,
+      node,
+      agentAddress: perm.agentAddress,
+      ownerAddress: perm.ownerAddress,
+      isActive: perm.isActive,
+      biometricThresholdUSD: perm.biometricThresholdUSD,
+      dailySpendingLimitUSD: perm.dailySpendingLimitUSD,
+      currentDailySpentUSD: perm.currentDailySpentUSD,
+      textRecords,
+      whitelists: {
+        AegisUniswapAdapter: uniswapWhitelisted,
+      },
+    };
+  }
+
+  async lookupAddress(agentAddress: string) {
+    const perm = await this.getAgentPermissionsByAddress(agentAddress);
+    if (!perm) return null;
+    return this.resolveName(perm.subnameFull);
+  }
 }

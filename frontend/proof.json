@@ -52,5 +52,33 @@
     "txHash": "0x3d15ad53186ba14cbe29947be4718a915aeabecaaa2baf3018579da7c4c09f5a",
     "explorerUrl": "https://storagescan.0g.ai/file/0xc9d5549ae5460e519da8ecf0c4a3ef9e954130f20ab26fb101d88969563a213d",
     "docsUrl": "https://docs.0g.ai"
+  },
+  "ens": {
+    "subnameFull": "shriyashdn.aegisnet.eth",
+    "subnameNode": "0xbb178d2acebebd29a3ad8f7b3c0135cd4ef9184636124b0152805111b0032306",
+    "registry": "0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE",
+    "architecture": "ENSv2 Hierarchical Identity & Execution Access Control (EAC)",
+    "records": {
+      "agent.capabilities": "uniswap_v3_swap,0g_compute_strategy,worldid_2fa",
+      "agent.biometric_threshold": "1000",
+      "agent.operator": "0xB6Ba1Be32B7cA2729551882B71E8F469D06510e6",
+      "agent.proof_of_ownership": "0x2dda15445e66943d7a0e52dbd6c8f0ea736b1772320a35e2a6912b3d809f0754",
+      "agent.storage_root": "0x58776c490fe4e9c847e7ebc42d0d895aeb4268c1478d1ac48d62c4dc40726ecb",
+      "agent.specification": "ENSv2 EAC & ENSIP-26 Agent Text Records"
+    },
+    "txHashes": {
+      "capabilities": "0xa4fc4366ebbe3935e1cc78de72c02e5a6d41a4bf1b0fe835eddb89398797df7d",
+      "threshold": "0x3545489eee8d28f09123b0764fe0b5d015ed14f7db40c6ff778e35faf984ad2a",
+      "operator": "0x4733f2ea2118c563240ea3111be9bec6cac4dd6d28747603ea16ee3689939d66",
+      "proofOfOwnership": "0x18839370a80186dc14eacc8cd944a66d588c264b9fa2af7fa142284e86126e04",
+      "storageRoot": "0xd3afa71bd1bf505d28a264c4a6de4478c79e00ba3cf5d7ed7fb4acab452ae066",
+      "specification": "0x4f6147db998b4b2e8c227ad16b5f0330da82c19e394fc86fc2e8164ec1e385f2"
+    }
+  },
+  "worldId": {
+    "proofOfOwnership": true,
+    "verificationLevel": "orb",
+    "orbCommitment": "0x2dda15445e66943d7a0e52dbd6c8f0ea736b1772320a35e2a6912b3d809f0754",
+    "proofLength": 980
   }
 }

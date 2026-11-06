@@ -55,6 +55,39 @@ if (deployedConfigPath) {
 // Treat template placeholders as "not configured"
 const realValue = (v?: string) => (v && !/your_|_here$|^0x_/i.test(v) ? v : undefined);
 
+export interface ProofOfOwnershipConfig {
+  verified: boolean;
+  orbCommitment?: string;
+  orbProofLength?: number;
+  commitments?: Record<string, string>;
+}
+
+function parseProofOfOwnership(rawVal?: string): ProofOfOwnershipConfig | null {
+  if (!rawVal || /your_|_here$/i.test(rawVal)) return null;
+  try {
+    const trimmed = rawVal.trim();
+    let jsonStr: string;
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      jsonStr = trimmed;
+    } else {
+      jsonStr = Buffer.from(trimmed, 'base64').toString('utf-8');
+    }
+    const parsed = JSON.parse(jsonStr);
+    const orbCommitment = parsed.identity_commitments?.orb;
+    const orbProof = parsed.orb_proof;
+    const proofLength = orbProof ? (Array.isArray(orbProof) ? orbProof.length : Object.keys(orbProof).length) : 0;
+    return {
+      verified: !!orbCommitment,
+      orbCommitment: orbCommitment ? String(orbCommitment).toLowerCase() : undefined,
+      orbProofLength: proofLength,
+      commitments: parsed.identity_commitments || {},
+    };
+  } catch (err) {
+    console.warn('Could not parse PROOF_OF_OWNERSHIP from environment:', err);
+    return null;
+  }
+}
+
 const isProduction = process.env.NODE_ENV === 'production';
 
 export const config = {
@@ -95,5 +128,6 @@ export const config = {
   // First block to index; auto-detected from the manager's deployment when unset
   indexerStartBlock: process.env.INDEXER_START_BLOCK ? parseInt(process.env.INDEXER_START_BLOCK, 10) : deployedStartBlock,
   dataDir: process.env.DATA_DIR || path.resolve(__dirname, '../../data'),
+  proofOfOwnership: parseProofOfOwnership(process.env.PROOF_OF_OWNERSHIP),
   contracts: contractAddresses,
 };

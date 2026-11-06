@@ -421,7 +421,9 @@
     if (!w.connected || state.api === null) { renderDashboard(); return Promise.resolve(); }
     var addr = w.address;
     return Promise.all([
-      api('/api/ens/permissions/' + addr).then(function (r) { return r.permissions; }, function () { return null; }),
+      api('/api/ens/lookup/' + addr).catch(function () {
+        return api('/api/ens/permissions/' + addr).then(function (r) { return r.permissions; }, function () { return null; });
+      }),
       api('/api/ens/agents?owner=' + addr).then(function (r) { return r.agents; }, function () { return []; }),
       Chain.balanceOf(addr),
     ]).then(function (res) {
@@ -429,7 +431,7 @@
       state.myAgent = res[0];
       state.myAgents = res[1] || [];
       state.balance = res[2];
-      if (state.myAgent && state.myAgent.isActive) setNode(state.myAgent.subnameNode);
+      if (state.myAgent && state.myAgent.isActive) setNode(state.myAgent.subnameNode || state.myAgent.node);
       else if (state.myAgents[0]) setNode(state.myAgents[0].subnameNode);
       renderWallet();
       renderAgentList();
@@ -876,9 +878,12 @@
 
     var wid = state.worldId || {};
     var mode = wid.mode || 'cloud';
+    var hasProof = !!(wid.proofOfOwnership && wid.proofOfOwnership.verified) || !!(state.health && state.health.worldId && state.health.worldId.proofOfOwnership && state.health.worldId.proofOfOwnership.verified);
+    var orbCommitment = (wid.proofOfOwnership && wid.proofOfOwnership.orbCommitment) || (state.health && state.health.worldId && state.health.worldId.proofOfOwnership && state.health.worldId.proofOfOwnership.orbCommitment) || '';
 
     if ($('#wid-mode-badge')) {
-      $('#wid-mode-badge').textContent = '● World ID Agent Pass (Human Checkpoint)';
+      $('#wid-mode-badge').textContent = hasProof ? '● World ID Orb Proof of Ownership (Verified Human)' : '● World ID Agent Pass (Human Checkpoint)';
+      if (hasProof) $('#wid-mode-badge').style.color = '#c084fc';
     }
 
     $('#wid-prompt').textContent = 'A ' + usd(req.valueUSD) + ' trade by ' + (req.agentSubname || short(req.agentAddress)) +
@@ -887,11 +892,13 @@
       '<dt>Request</dt><dd class="mono">' + esc(short(req.requestId, 12, 6)) + '</dd>' +
       '<dt>Trade Value</dt><dd>' + usd(req.valueUSD) + '</dd>' +
       '<dt>Agent</dt><dd>' + esc(req.agentSubname || short(req.agentAddress)) + '</dd>' +
-      '<dt>Security Gate</dt><dd class="mono" style="color:#c084fc">World ID Agent Pass (OIDC Human Checkpoint)</dd>';
+      '<dt>Security Gate</dt><dd class="mono" style="color:#c084fc">' + (hasProof ? 'World ID Orb Proof of Ownership (' + esc(orbCommitment.slice(0, 8) + '…' + orbCommitment.slice(-6)) + ')' : 'World ID Agent Pass (OIDC Human Checkpoint)') + '</dd>';
     $('#wid-steps').hidden = true;
     $('#wid-steps').innerHTML = '';
-    $('#wid-verify').textContent = 'Verify Human with Agent Pass';
-    $('#wid-hint').innerHTML = 'Verifies proof of humanity server-side per auth.world.org guidelines and signs relayer attestation over (requestId, nullifier, deadline).';
+    $('#wid-verify').textContent = hasProof ? 'Authorize with Verified World ID' : 'Verify Human with Agent Pass';
+    $('#wid-hint').innerHTML = hasProof
+      ? 'Validated against authentic cryptographic World ID Orb proof of ownership. Relayer signs single-use attestation bound on Sepolia.'
+      : 'Verifies proof of humanity server-side per auth.world.org guidelines and signs relayer attestation over (requestId, nullifier, deadline).';
     $('#wid-verify').disabled = false;
     if ($('#wid-deny')) $('#wid-deny').disabled = false;
     $('#wid-cancel').disabled = false;
@@ -1272,11 +1279,28 @@
       pillEl.hidden = false;
       pillEl.className = 'status-pill ' + (me.isActive ? 's-ok' : 's-err');
       pillEl.textContent = me.isActive ? 'Active' : 'Revoked';
+      var records = me.textRecords || {};
+      var proofBadge = '';
+      if (records['agent.proof_of_ownership']) {
+        var commitment = records['agent.proof_of_ownership'];
+        proofBadge = '<dt>World ID Verification</dt><dd><span class="status-pill s-ok" style="font-size:11px;border-color:#a855f7;color:#d8b4fe">● Orb-Verified Human</span> <span class="mono hint" title="' + esc(commitment) + '">' + esc(commitment.slice(0, 6) + '…' + commitment.slice(-4)) + '</span></dd>';
+      } else if (state.health && state.health.worldId && state.health.worldId.proofOfOwnership) {
+        var c = state.health.worldId.proofOfOwnership.orbCommitment || '';
+        proofBadge = '<dt>World ID Verification</dt><dd><span class="status-pill s-ok" style="font-size:11px;border-color:#a855f7;color:#d8b4fe">● Orb-Verified Human</span> <span class="mono hint">' + esc(c.slice(0, 6) + '…' + c.slice(-4)) + '</span></dd>';
+      }
+      var storageBadge = '';
+      if (records['agent.storage_root']) {
+        var root = records['agent.storage_root'];
+        storageBadge = '<dt>0G Storage Audit</dt><dd><span class="mono hint" title="' + esc(root) + '">' + esc(root.slice(0, 8) + '…' + root.slice(-6)) + '</span></dd>';
+      }
+
       card.innerHTML = '<dl class="kv">' +
-        '<dt>Name</dt><dd>' + esc(me.subnameFull) + '</dd>' +
-        '<dt>Agent</dt><dd>' + addrLink(me.agentAddress) + ' <span class="hint">(this wallet)</span></dd>' +
-        '<dt>Owner</dt><dd>' + addrLink(me.ownerAddress) + '</dd>' +
-        '<dt>Needs approval at</dt><dd>≥ ' + usd(me.biometricThresholdUSD) + '</dd>' +
+        '<dt>ENSv2 Identity</dt><dd><strong>' + esc(me.subnameFull) + '</strong></dd>' +
+        '<dt>Agent Address</dt><dd>' + addrLink(me.agentAddress) + ' <span class="hint">(this wallet)</span></dd>' +
+        '<dt>Owner Address</dt><dd>' + addrLink(me.ownerAddress) + '</dd>' +
+        '<dt>Human Approval Gate</dt><dd>≥ ' + usd(me.biometricThresholdUSD) + '</dd>' +
+        proofBadge +
+        storageBadge +
         '</dl>' +
         '<div class="agent-limit"><div class="agent-limit-top"><span>Spent today</span><span>' + usd(spent) + ' of ' + usd(limit) + '</span></div>' +
         '<div class="bar"><i style="width:' + pct.toFixed(1) + '%"></i></div></div>' +

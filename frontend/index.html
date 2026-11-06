@@ -900,6 +900,8 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
         <div class="hero-built-row appear appear--soft" style="--d:1.16s">
           <span class="built-label">Built with</span>
           <div class="built-wordmarks">
+            <span class="wordmark-pill">ENSv2 Identity</span>
+            <span class="wordmark-dot">·</span>
             <span class="wordmark-pill">World ID Agent Pass</span>
             <span class="wordmark-dot">·</span>
             <span class="wordmark-pill">Uniswap V3</span>
@@ -1083,7 +1085,7 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
           <span class="step-n" aria-label="Step 2: Check">
             <svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
           </span>
-          <div><h3>Check (on-chain limits)</h3><p>AegisExecutionManager verifies onchain that the agent is active, the adapter is whitelisted, and the trade fits daily spend limits.</p></div>
+          <div><h3>Check (ENSv2 Identity &amp; on-chain limits)</h3><p>AegisExecutionManager queries AegisSubnameRegistry on Sepolia to verify the agent's ENSv2 identity, EAC target contract whitelist, and daily spend limits.</p></div>
         </li>
         <li class="reveal">
           <span class="step-n" aria-label="Step 3: Approve">
@@ -1254,7 +1256,7 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
     <div class="table-responsive">
       <div class="network reveal" id="net-table">
         <div class="net-row net-head"><span>Contract</span><span>Address</span><span>Role</span></div>
-        <div class="net-row"><span class="net-name">AegisSubnameRegistry</span><a class="net-addr" href="https://sepolia.etherscan.io/address/0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE" target="_blank" rel="noopener" title="0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE">0x6Dbd…49FE</a><span class="net-role">Agent permissions, daily limits &amp; approval threshold</span></div>
+        <div class="net-row"><span class="net-name">AegisSubnameRegistry</span><a class="net-addr" href="https://sepolia.etherscan.io/address/0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE" target="_blank" rel="noopener" title="0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE">0x6Dbd…49FE</a><span class="net-role">ENSv2 Subname Registry, EAC whitelists &amp; ENSIP-26 metadata</span></div>
         <div class="net-row"><span class="net-name">AegisExecutionManager</span><a class="net-addr" href="https://sepolia.etherscan.io/address/0x13d7b8Add8265AB1Cfdc3a6E8E60D1b3bcD56fa8" target="_blank" rel="noopener" title="0x13d7b8Add8265AB1Cfdc3a6E8E60D1b3bcD56fa8">0x13d7…6fa8</a><span class="net-role">Request queue, on-chain limit enforcement &amp; approval gate</span></div>
         <div class="net-row"><span class="net-name">AegisUniswapAdapter</span><a class="net-addr" href="https://sepolia.etherscan.io/address/0x6383A973B4d65a48E489f22F9eD298CA7230C185" target="_blank" rel="noopener" title="0x6383A973B4d65a48E489f22F9eD298CA7230C185">0x6383…C185</a><span class="net-role">Uniswap V3 SwapRouter02 execution adapter</span></div>
       </div>

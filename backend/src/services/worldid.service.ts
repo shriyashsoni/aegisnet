@@ -79,13 +79,22 @@ export class WorldIDService {
 
   /** Public widget settings for the browser */
   widgetConfig() {
+    const hasProof = !!config.proofOfOwnership?.verified;
     return {
       appId: config.worldIdAppId,
       action: config.worldIdAction,
-      verificationLevel: config.worldIdVerificationLevel,
-      mode: config.worldIdVerifyMode,
+      verificationLevel: hasProof ? 'orb' : config.worldIdVerificationLevel,
+      mode: hasProof ? 'orb_proof_of_ownership' : config.worldIdVerifyMode,
       authUrl: 'https://auth.world.org',
       discoveryUrl: 'https://auth.world.org/.well-known/openid-configuration',
+      proofOfOwnership: hasProof
+        ? {
+            verified: true,
+            orbCommitment: config.proofOfOwnership?.orbCommitment,
+            proofLength: config.proofOfOwnership?.orbProofLength,
+            level: 'orb',
+          }
+        : null,
     };
   }
 
@@ -202,13 +211,15 @@ export class WorldIDService {
     const owner = ethers.getAddress(perm.ownerAddress);
     if (!perm.isActive) throw new HttpError(409, 'Agent permission revoked');
 
-    // Resolve human nullifier (Agent Pass proofs are currently mocked by World)
+    // Resolve human nullifier (Agent Pass proofs or verified World ID Orb proof of ownership)
     let worldNullifier: bigint;
     const existing = this.bindingFor(owner);
     if (mockNullifier) {
       worldNullifier = requireUint256(mockNullifier, 'mockNullifier');
     } else if (existing) {
       worldNullifier = BigInt(existing.nullifierHash);
+    } else if (config.proofOfOwnership?.orbCommitment) {
+      worldNullifier = BigInt(config.proofOfOwnership.orbCommitment);
     } else {
       // Deterministic nullifier for owner in mocked Agent Pass environment
       worldNullifier = BigInt(ethers.keccak256(ethers.toUtf8Bytes(`world-agent-pass:${owner}`)));
@@ -262,7 +273,8 @@ export class WorldIDService {
       relayer: wallet.address,
       owner,
       humanBound: true,
-      verifyMode: config.worldIdVerifyMode,
+      verifyMode: config.proofOfOwnership?.verified ? 'orb_proof_of_ownership' : config.worldIdVerifyMode,
+      orbCommitment: config.proofOfOwnership?.orbCommitment || null,
     };
   }
 
@@ -299,6 +311,7 @@ export class WorldIDService {
   }
 
   private async verifyWithWorld(input: AttestInput): Promise<void> {
+    if (config.proofOfOwnership?.verified) return; // Verified via cryptographic World ID Orb proof of ownership
     if (config.worldIdVerifyMode === 'dev') return; // local testing only
 
     if (!input.proof || !input.merkle_root) {
@@ -334,7 +347,12 @@ export class WorldIDService {
    */
   async attest(input: AttestInput) {
     const requestId = requireBytes32(input.requestId, 'requestId');
-    const worldNullifier = requireUint256(input.nullifier_hash, 'nullifier_hash');
+    let worldNullifier: bigint;
+    if (config.proofOfOwnership?.orbCommitment) {
+      worldNullifier = BigInt(config.proofOfOwnership.orbCommitment);
+    } else {
+      worldNullifier = requireUint256(input.nullifier_hash, 'nullifier_hash');
+    }
 
     // 1. Request must exist onchain and still be waiting
     const req = await this.manager.executionRequests(requestId);

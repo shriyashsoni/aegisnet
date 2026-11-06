@@ -77,11 +77,26 @@ app.get('/api/health', async (_req, res) => {
     rpcReachable: chainId !== null,
     environment: config.env,
     rootEnsName: config.rootEnsName,
+    ens: {
+      architecture: 'ENSv2 Hierarchical Identity & EAC Registry',
+      rootName: config.rootEnsName,
+      registry: config.contracts.AegisSubnameRegistry,
+      standards: ['ENSv2 Subregistry', 'ENSIP-26 Agent Text Records', 'EIP-137', 'EIP-634', 'ERC-165'],
+    },
     approvalThresholdUSD: config.biometricDefaultThresholdUSD,
     biometricThresholdUSD: config.biometricDefaultThresholdUSD,
     relayer: { address: signerAddress, matchesContract: checks.relayerOk, onchain: checks.relayerOnchain },
     uniswapRouter: checks.uniswapRouter,
     approvalGate: 'Human Approval Gate (World ID 2FA)',
+    worldId: {
+      mode: config.proofOfOwnership?.verified ? 'orb_proof_of_ownership' : config.worldIdVerifyMode,
+      verificationLevel: config.proofOfOwnership?.verified ? 'orb' : config.worldIdVerificationLevel,
+      proofOfOwnership: config.proofOfOwnership?.verified ? {
+        verified: true,
+        orbCommitment: config.proofOfOwnership.orbCommitment,
+        proofLength: config.proofOfOwnership.orbProofLength,
+      } : null,
+    },
     ai: {
       provider: config.plannerProvider,
       enabled: config.plannerProvider === '0g' ? Boolean(config.zgComputeApiKey) : claudePlanner.enabled,

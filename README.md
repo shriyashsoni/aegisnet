@@ -54,9 +54,9 @@ To trade on your behalf, an AI agent needs a wallet key. That creates three crit
 
 | Layer | What it does | Where |
 | :--- | :--- | :--- |
-| **Identity & limits** | Every agent is registered as `name.aegisnet.eth` with an owner, a whitelist of contracts it may call, a daily spending limit and an approval threshold. | `AegisSubnameRegistry` |
+| **Identity & limits** | Built on **ENSv2 Hierarchical Identity**: Every agent is registered as `name.aegisnet.eth` with an owner, target whitelist (EAC), daily spending limit, approval threshold, and ENSIP-26 agent text records. | `AegisSubnameRegistry` |
 | **Execution gate** | Agents can't act directly. They submit requests to the manager, which checks identity and whitelist onchain. Under the threshold a trade runs immediately; at or above it, the trade pauses. | `AegisExecutionManager` |
-| **Human Approval Gate** | A paused trade executes only after the owner authorizes it via the Human Approval Gate (World ID Agent Pass). The gateway relayer verifies the human credential, issues a single-use nullifier to prevent replay, and unlocks execution on Ethereum Sepolia via `approveWithRelayer`. | Backend + `AegisExecutionManager` |
+| **Human Approval Gate** | A paused trade executes only after the owner authorizes it via the Human Approval Gate (World ID Agent Pass & Orb Proof of Ownership). The gateway relayer verifies the human credential, issues a single-use nullifier to prevent replay, and unlocks execution on Ethereum Sepolia via `approveWithRelayer`. | Backend + `AegisExecutionManager` |
 | **AI planning** | **0G Private Compute** evaluates goals with verifiable TEE inference. Deterministic code, not the model, builds the transaction. | 0G Compute + Backend |
 | **Routing** | Autonomous trades route directly through official Uniswap V3 `SwapRouter02` on Sepolia with real token transfers, approvals, and slippage guards. | `AegisUniswapAdapter` |
 | **Audit trail** | Every planned trade and executed decision is committed to 0G Decentralized Storage with an immutable Merkle root. | 0G Galileo Testnet |

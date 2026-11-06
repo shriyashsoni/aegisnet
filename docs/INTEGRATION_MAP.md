@@ -254,13 +254,21 @@ An automated check between all configuration repositories confirms:
 
 ---
 
-### 3.5 ENS / ENSIP-26 Subname Registry
-- **Plain Words:** Self-contained subname registry contract (`name.aegisnet.eth`) holding agent permissions, owner bindings, daily limits, and text records matching the ENSIP-26 specification (`agent.capabilities`, `agent.biometric_threshold`).
+### 3.5 ENSv2 Hierarchical Subregistry & ENSIP-26 Agent Metadata
+- **Plain Words:** Fully functional ENSv2 hierarchical subregistry and Execution Access Control (EAC) contract (`name.aegisnet.eth`) on Sepolia. It acts as the central security and identity boundary for autonomous agents, storing owner bindings, target whitelists, daily allowances, and standard ENSIP-26 text records.
+- **Why Central (Not a Cosmetic Add-On):** An agent **CANNOT** execute any transaction on AegisNet without an active ENSv2 subname registered on Sepolia. `AegisExecutionManager.requestExecution` queries `AegisSubnameRegistry.isAgentAuthorized` onchain before any calldata is queued or dispatched.
 - **Execution Target:** Ethereum Sepolia (`AegisSubnameRegistry.sol` at `0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE`).
 - **Exact Code Locations:**
   - Contract: [`contracts/contracts/AegisSubnameRegistry.sol`](file:///c:/Users/Siddhu/Downloads/aegisnet/contracts/contracts/AegisSubnameRegistry.sol)
   - Backend Service: [`backend/src/services/ens.service.ts`](file:///c:/Users/Siddhu/Downloads/aegisnet/backend/src/services/ens.service.ts)
-- **Status (Real vs. Mock):** **REAL**. Deployed and operational on Sepolia. Self-contained registry that computes `namehash("aegisnet.eth")` without requiring mainnet ENS registrar dependencies.
+  - API Routes: [`backend/src/routes/ens.routes.ts`](file:///c:/Users/Siddhu/Downloads/aegisnet/backend/src/routes/ens.routes.ts)
+- **Status (Real vs. Mock):** **REAL**. Deployed and operational on Sepolia. Live ENSIP-26 text records confirmed onchain:
+  - `agent.capabilities` (`0xa4fc4366ebbe3935e1cc78de72c02e5a6d41a4bf1b0fe835eddb89398797df7d`)
+  - `agent.biometric_threshold` (`0x3545489eee8d28f09123b0764fe0b5d015ed14f7db40c6ff778e35faf984ad2a`)
+  - `agent.operator` (`0x4733f2ea2118c563240ea3111be9bec6cac4dd6d28747603ea16ee3689939d66`)
+  - `agent.proof_of_ownership` (`0x18839370a80186dc14eacc8cd944a66d588c264b9fa2af7fa142284e86126e04`)
+  - `agent.storage_root` (`0xd3afa71bd1bf505d28a264c4a6de4478c79e00ba3cf5d7ed7fb4acab452ae066`)
+  - `agent.specification` (`0x4f6147db998b4b2e8c227ad16b5f0330da82c19e394fc86fc2e8164ec1e385f2`)
 - **Environment Variables:** `ENS_ROOT_NAME`: **SET** (`aegisnet.eth`).
 - **Failure Mode & Invariant:** If an agent is unregistered or revoked, `isAgentAuthorized` returns `false`, causing `AegisExecutionManager.requestExecution` to revert immediately.
 
