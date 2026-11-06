@@ -32,6 +32,11 @@ async function main() {
       args: [contracts.AegisSubnameRegistry, 1, deployer],
     },
     {
+      name: "AegisUniswapAdapter",
+      address: contracts.AegisUniswapAdapter,
+      args: [contracts.AegisExecutionManager, "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E"],
+    },
+    {
       name: "AegisSwapVMAdapter",
       address: contracts.AegisSwapVMAdapter,
       args: [contracts.AegisExecutionManager],

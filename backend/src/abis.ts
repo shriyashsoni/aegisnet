@@ -57,3 +57,12 @@ export const AdapterABI = [
   'function executeSwapVMRoute(bytes encodedInstructions) returns (uint256 finalOutputAmount)',
   'event SwapVMExecuted(address indexed srcToken, address indexed dstToken, uint256 inputAmount, uint256 outputAmount)',
 ];
+
+export const UniswapAdapterABI = [
+  'function executeExactInputSingle((address tokenIn, address tokenOut, uint24 fee, address recipient, uint256 amountIn, uint256 amountOutMinimum, uint160 sqrtPriceLimitX96) params, address payer) returns (uint256 amountOut)',
+  'function executeSwap(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn, uint256 amountOutMinimum, address recipient, address payer) returns (uint256 amountOut)',
+  'function executeSwapVMRoute(bytes encodedInstructions) returns (uint256 finalOutputAmount)',
+  'function swapRouter() view returns (address)',
+  'event UniswapSwapExecuted(address indexed tokenIn, address indexed tokenOut, uint24 fee, uint256 amountIn, uint256 amountOut, address indexed recipient)',
+  'event SwapVMExecuted(address indexed srcToken, address indexed dstToken, uint256 inputAmount, uint256 outputAmount)',
+];

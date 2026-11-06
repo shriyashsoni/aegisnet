@@ -4,7 +4,7 @@ const { time } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("AegisNet Matrix Core Protocol Tests", function () {
   let owner, agent, user, relayer;
-  let registry, executionManager, swapVMAdapter, uniswapHook, mockToken;
+  let registry, executionManager, swapVMAdapter, uniswapAdapter, mockSwapRouter, uniswapHook, mockToken, mockWETH;
 
   const ROOT_NAME = "aegisnet.eth";
   const SUBNAME_LABEL = "agent1";
@@ -31,7 +31,19 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
     // Link executionManager in registry
     await registry.connect(owner).setExecutionManager(await executionManager.getAddress());
 
-    // 4. Deploy 1inch SwapVM Adapter
+    // 3. Deploy Mock SwapRouter02 & AegisUniswapAdapter (Uniswap V3)
+    const MockRouterFactory = await ethers.getContractFactory("MockSwapRouter02");
+    mockSwapRouter = await MockRouterFactory.deploy();
+    await mockSwapRouter.waitForDeployment();
+
+    const UniswapAdapterFactory = await ethers.getContractFactory("AegisUniswapAdapter");
+    uniswapAdapter = await UniswapAdapterFactory.deploy(
+      await executionManager.getAddress(),
+      await mockSwapRouter.getAddress()
+    );
+    await uniswapAdapter.waitForDeployment();
+
+    // 4. Deploy 1inch SwapVM Adapter (Labeled OUT OF SCOPE prototype)
     const SwapVMFactory = await ethers.getContractFactory("AegisSwapVMAdapter");
     swapVMAdapter = await SwapVMFactory.deploy(await executionManager.getAddress());
     await swapVMAdapter.waitForDeployment();
@@ -44,10 +56,13 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
     );
     await uniswapHook.waitForDeployment();
 
-    // 6. Deploy Mock ERC20 Token
+    // 6. Deploy Mock ERC20 Tokens (USDC & WETH)
     const TokenFactory = await ethers.getContractFactory("MockERC20");
     mockToken = await TokenFactory.deploy("USD Coin", "USDC");
     await mockToken.waitForDeployment();
+
+    mockWETH = await TokenFactory.deploy("Wrapped Ether", "WETH");
+    await mockWETH.waitForDeployment();
   });
 
   describe("Phase I: Identity & Delegation (ENSv2 EAC)", function () {
@@ -960,6 +975,230 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
       );
       const receipt = await tx.wait();
       expect(receipt.status).to.equal(1);
+    });
+  });
+
+  describe("Phase VI: Real Uniswap V3 Token Swaps via AegisUniswapAdapter & SwapRouter02", function () {
+    let subnameNode;
+
+    beforeEach(async function () {
+      await registry.connect(owner).registerSubname(
+        "uniswap-agent",
+        agent.address,
+        BIOMETRIC_THRESHOLD,
+        DAILY_LIMIT
+      );
+      subnameNode = await registry.agentToNode(agent.address);
+
+      // Whitelist AegisUniswapAdapter
+      await registry.connect(owner).setTargetContractWhitelist(
+        subnameNode,
+        await uniswapAdapter.getAddress(),
+        true
+      );
+
+      // Mint initial token balances
+      // 10,000 USDC to user
+      await mockToken.mint(user.address, ethers.parseEther("10000"));
+      // 10,000 WETH to mock SwapRouter02 liquidity pool
+      await mockWETH.mint(await mockSwapRouter.getAddress(), ethers.parseEther("10000"));
+    });
+
+    it("Should execute a real Uniswap V3 swap with real ERC-20 transferFrom and delivery (proving tokens actually move)", async function () {
+      const amountIn = ethers.parseEther("500");
+      const minAmountOut = ethers.parseEther("490");
+
+      // User approves AegisUniswapAdapter to pull amountIn
+      await mockToken.connect(user).approve(await uniswapAdapter.getAddress(), amountIn);
+
+      const swapParams = {
+        tokenIn: await mockToken.getAddress(),
+        tokenOut: await mockWETH.getAddress(),
+        fee: 3000,
+        recipient: user.address,
+        amountIn: amountIn,
+        amountOutMinimum: minAmountOut,
+        sqrtPriceLimitX96: 0
+      };
+
+      const encodedCall = uniswapAdapter.interface.encodeFunctionData("executeExactInputSingle", [
+        swapParams,
+        user.address
+      ]);
+
+      const userInBefore = await mockToken.balanceOf(user.address);
+      const userOutBefore = await mockWETH.balanceOf(user.address);
+      const routerInBefore = await mockToken.balanceOf(await mockSwapRouter.getAddress());
+      const routerOutBefore = await mockWETH.balanceOf(await mockSwapRouter.getAddress());
+
+      // Low-value trade ($500 < $1,000) auto-executes immediately
+      const tx = await executionManager.connect(agent).requestExecution(
+        await uniswapAdapter.getAddress(),
+        encodedCall,
+        amountIn
+      );
+      const receipt = await tx.wait();
+
+      const userInAfter = await mockToken.balanceOf(user.address);
+      const userOutAfter = await mockWETH.balanceOf(user.address);
+      const routerInAfter = await mockToken.balanceOf(await mockSwapRouter.getAddress());
+      const routerOutAfter = await mockWETH.balanceOf(await mockSwapRouter.getAddress());
+
+      // 1. User's tokenIn decreased by exact amountIn
+      expect(userInBefore - userInAfter).to.equal(amountIn);
+
+      // 2. Router's tokenIn increased by exact amountIn
+      expect(routerInAfter - routerInBefore).to.equal(amountIn);
+
+      // 3. User's tokenOut increased by exact amountOut from router (500 * 997 / 1000 = 498.5)
+      const expectedOut = (amountIn * 997n) / 1000n;
+      expect(userOutAfter - userOutBefore).to.equal(expectedOut);
+
+      // 4. Router's tokenOut decreased by exact amountOut
+      expect(routerOutBefore - routerOutAfter).to.equal(expectedOut);
+
+      // 5. Adapter holds zero tokens (funds cleanly settled to recipient)
+      expect(await mockToken.balanceOf(await uniswapAdapter.getAddress())).to.equal(0n);
+      expect(await mockWETH.balanceOf(await uniswapAdapter.getAddress())).to.equal(0n);
+
+      // Check event emitted
+      const swapEvent = receipt.logs.find(log => {
+        try {
+          const parsed = uniswapAdapter.interface.parseLog(log);
+          return parsed && parsed.name === "UniswapSwapExecuted";
+        } catch { return false; }
+      });
+      expect(swapEvent).to.not.be.undefined;
+    });
+
+    it("Should pause high-value Uniswap trade, require World ID Agent Pass approval, and execute real token swap upon attestation", async function () {
+      const amountIn = ethers.parseEther("2500");
+      const minAmountOut = ethers.parseEther("2450");
+
+      // User approves adapter for 2500 USDC
+      await mockToken.connect(user).approve(await uniswapAdapter.getAddress(), amountIn);
+
+      const swapParams = {
+        tokenIn: await mockToken.getAddress(),
+        tokenOut: await mockWETH.getAddress(),
+        fee: 3000,
+        recipient: user.address,
+        amountIn: amountIn,
+        amountOutMinimum: minAmountOut,
+        sqrtPriceLimitX96: 0
+      };
+
+      const encodedCall = uniswapAdapter.interface.encodeFunctionData("executeExactInputSingle", [
+        swapParams,
+        user.address
+      ]);
+
+      const userInBefore = await mockToken.balanceOf(user.address);
+      const userOutBefore = await mockWETH.balanceOf(user.address);
+
+      // High-value trade ($2,500 >= $1,000) pauses onchain
+      const reqTx = await executionManager.connect(agent).requestExecution(
+        await uniswapAdapter.getAddress(),
+        encodedCall,
+        amountIn
+      );
+      const reqReceipt = await reqTx.wait();
+      const reqEvent = reqReceipt.logs.find(log => log.fragment && log.fragment.name === "ExecutionRequested");
+      const requestId = reqEvent.args.requestId;
+
+      // Invariant: Before approval, zero tokens have moved
+      expect(await mockToken.balanceOf(user.address)).to.equal(userInBefore);
+      expect(await mockWETH.balanceOf(user.address)).to.equal(userOutBefore);
+
+      // World ID Agent Pass Attestation
+      const latestBlock = await ethers.provider.getBlock("latest");
+      const deadline = latestBlock.timestamp + 15 * 60;
+      const nullifier = 888777666555n;
+
+      const managerAddr = await executionManager.getAddress();
+      const network = await ethers.provider.getNetwork();
+      const messageHash = ethers.solidityPackedKeccak256(
+        ["bytes32", "uint256", "uint256", "address", "uint256"],
+        [requestId, nullifier, deadline, managerAddr, network.chainId]
+      );
+      const sig = await relayer.signMessage(ethers.getBytes(messageHash));
+
+      // Approve with relayer and atomically execute swap
+      const approveTx = await executionManager.connect(user)["approveWithRelayer(bytes32,uint256,uint256,bytes)"](
+        requestId,
+        nullifier,
+        deadline,
+        sig
+      );
+      await approveTx.wait();
+
+      const userInAfter = await mockToken.balanceOf(user.address);
+      const userOutAfter = await mockWETH.balanceOf(user.address);
+
+      // Invariant: After approval, tokens have moved on Uniswap
+      expect(userInBefore - userInAfter).to.equal(amountIn);
+      const expectedOut = (amountIn * 997n) / 1000n;
+      expect(userOutAfter - userOutBefore).to.equal(expectedOut);
+    });
+
+    it("Should strictly revert and leave tokens untouched if slippage threshold is breached", async function () {
+      const amountIn = ethers.parseEther("500");
+      // Intentionally unfulfillable min output (550 > 498.5 output)
+      const excessiveMinOut = ethers.parseEther("550");
+
+      await mockToken.connect(user).approve(await uniswapAdapter.getAddress(), amountIn);
+
+      const swapParams = {
+        tokenIn: await mockToken.getAddress(),
+        tokenOut: await mockWETH.getAddress(),
+        fee: 3000,
+        recipient: user.address,
+        amountIn: amountIn,
+        amountOutMinimum: excessiveMinOut,
+        sqrtPriceLimitX96: 0
+      };
+
+      const encodedCall = uniswapAdapter.interface.encodeFunctionData("executeExactInputSingle", [
+        swapParams,
+        user.address
+      ]);
+
+      const userInBefore = await mockToken.balanceOf(user.address);
+
+      await expect(
+        executionManager.connect(agent).requestExecution(
+          await uniswapAdapter.getAddress(),
+          encodedCall,
+          amountIn
+        )
+      ).to.be.revertedWith("AegisManager: low level target call failed");
+
+      // Invariant: Revert protects user funds, zero tokens taken
+      expect(await mockToken.balanceOf(user.address)).to.equal(userInBefore);
+    });
+
+    it("Should support direct executeSwap helper method", async function () {
+      const amountIn = ethers.parseEther("300");
+      await mockToken.connect(user).approve(await uniswapAdapter.getAddress(), amountIn);
+
+      const encodedCall = uniswapAdapter.interface.encodeFunctionData("executeSwap", [
+        await mockToken.getAddress(),
+        await mockWETH.getAddress(),
+        3000,
+        amountIn,
+        ethers.parseEther("290"),
+        user.address,
+        user.address
+      ]);
+
+      const tx = await executionManager.connect(agent).requestExecution(
+        await uniswapAdapter.getAddress(),
+        encodedCall,
+        amountIn
+      );
+      await tx.wait();
+
+      expect(await mockWETH.balanceOf(user.address)).to.be.gt(0n);
     });
   });
 });

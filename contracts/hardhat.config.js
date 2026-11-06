@@ -14,7 +14,11 @@ module.exports = {
     },
   },
   networks: {
-    hardhat: {},
+    hardhat: {
+      forking: process.env.FORK_SEPOLIA === "true" ? {
+        url: process.env.SEPOLIA_RPC_URL || "https://rpc.ankr.com/eth_sepolia",
+      } : undefined,
+    },
     sepolia: {
       url: process.env.SEPOLIA_RPC_URL || "https://rpc.ankr.com/eth_sepolia",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
