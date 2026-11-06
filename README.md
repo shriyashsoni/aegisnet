@@ -177,23 +177,54 @@ Real transactions on Sepolia, made through these contracts by agent `agent1.aegi
 - **Enhanced Access Control (EAC):** a per-agent whitelist of callable contracts, a daily spending limit and an approval threshold, all checked by `isAgentAuthorized`.
 - **ENSIP-26 text records** such as `agent.capabilities` and `agent.description`.
 
-### 1inch: SwapVM & Aqua
-- Strategies compile to custom SwapVM instruction lists executed by `AegisSwapVMAdapter`:
+### 🦄 Uniswap Integration: Real Onchain V3 Swaps & v4 Gated Hooks
 
-| Opcode | Name | Purpose |
-| :---: | :--- | :--- |
-| `0x01` | `OP_EXCHANGE_SWAP` | Direct aggregator swap |
-| `0x02` | `OP_SPLIT_ROUTE` | Split order across liquidity sources |
-| `0x03` | `OP_VERIFY_MIN_OUTPUT` | Slippage guard, reverts below the minimum |
-| `0x04` | `OP_UNISWAP_V4_HOP` | Hop through the agent-gated Uniswap v4 hook |
-| `0x05` | `OP_AQUA_DEPOSIT` | Open a 1inch Aqua liquidity position |
-| `0x06` | `OP_AQUA_WITHDRAW` | Rebalance and harvest the Aqua position |
+AegisNet executes real, onchain token swaps on Ethereum Sepolia via Uniswap V3:
 
-- Optional live mainnet price quotes come from the **1inch Swap API** (`ONEINCH_API_KEY`).
+* **Official Sepolia Contract Addresses:**  
+  * **Uniswap SwapRouter02:** [`0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E`](https://sepolia.etherscan.io/address/0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E)
+  * **Universal Router:** `0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b`
+  * **Permit2:** `0x000000000022D473030F116dDEE9F6B43aC78BA3`
+  * **WETH9 (Sepolia):** `0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14`
+  * **USDC (Circle Sepolia):** `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`
 
-### Uniswap Foundation: v4 hooks
-- `AegisUniswapV4Hook.beforeSwap` checks the trading agent's permissions in the registry. It refuses any trade that would need human approval, so the approval gate cannot be bypassed.
-- Pools can be switched to agents-only with `setPoolGated` (hook owner only).
+* **Contract Implementation Files & Line Numbers:**
+  * **Adapter Contract:** [`contracts/contracts/AegisUniswapAdapter.sol`](contracts/contracts/AegisUniswapAdapter.sol#L75-L185)
+    * Line 75–83: [`executeExactInputSingle`](contracts/contracts/AegisUniswapAdapter.sol#L75-L83) validates caller is `AegisExecutionManager`.
+    * Line 90–110: [`executeSwap`](contracts/contracts/AegisUniswapAdapter.sol#L90-L110) constructs `ExactInputSingleParams`.
+    * Line 145–185: [`_performUniswapSwap`](contracts/contracts/AegisUniswapAdapter.sol#L145-L185) executes the real swap:
+      * Line 155–158: Pulls `tokenIn` via real `IERC20(tokenIn).transferFrom(payer, address(this), amountIn)`.
+      * Line 161–162: Sets real ERC-20 approvals for Uniswap `SwapRouter02`.
+      * Line 165: Records recipient's initial `tokenOut` balance.
+      * Line 168: Calls `ISwapRouter02(swapRouter).exactInputSingle(params)`.
+      * Line 171–172: Strictly verifies recipient's `tokenOut` balance increased by at least `amountOutMinimum`.
+  * **Router Interface:** [`contracts/contracts/interfaces/ISwapRouter02.sol`](contracts/contracts/interfaces/ISwapRouter02.sol#L10-L31) defines canonical `ExactInputSingleParams`.
+  * **Agent-Gated Hook:** [`contracts/contracts/AegisUniswapV4Hook.sol`](contracts/contracts/AegisUniswapV4Hook.sol#L45-L75) `beforeSwap` verifies agent ENS permissions onchain before pool interactions.
+
+### 💧 Step-by-Step Guide to Getting Sepolia Test Tokens
+
+To run real swaps on Ethereum Sepolia or test with live tokens:
+
+1. **Get Sepolia ETH (Gas):**
+   * **Google Cloud Web3 Faucet:** Visit [cloud.google.com/application/web3/faucet/ethereum/sepolia](https://cloud.google.com/application/web3/faucet/ethereum/sepolia) (provides 0.05 Sepolia ETH daily).
+   * **PoW Faucet:** Visit [sepolia-faucet.pk910.de](https://sepolia-faucet.pk910.de) to mine testnet ETH directly in your browser.
+   * **Alchemy Sepolia Faucet:** Visit [sepoliafaucet.com](https://sepoliafaucet.com).
+
+2. **Get Sepolia USDC (Circle Official):**
+   * Visit Circle's official Web3 Faucet at [faucet.circle.com](https://faucet.circle.com).
+   * Select **Ethereum Sepolia** and enter your wallet address.
+   * Delivers official native testnet USDC to your wallet (`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`).
+
+3. **Get Sepolia WETH:**
+   * Open MetaMask or your Web3 wallet and send Sepolia ETH directly to the official Sepolia WETH9 contract:
+     `0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14`
+   * Or connect to [app.uniswap.org](https://app.uniswap.org), switch network to Sepolia, and wrap Sepolia ETH to WETH.
+
+4. **Swap Directly on Sepolia Uniswap:**
+   * You can view and trade against active pools on [app.uniswap.org](https://app.uniswap.org) on Sepolia using the tokens above.
+
+### 1inch: SwapVM & Aqua (OUT OF SCOPE Prototype)
+* **Notice:** The 1inch SwapVM/Aqua opcode layer in [`AegisSwapVMAdapter.sol`](contracts/contracts/AegisSwapVMAdapter.sol) was an experimental concept prototype and is officially **OUT OF SCOPE**. AegisNet does not claim a live 1inch integration. Real on-chain DEX trades and token movements are executed through Uniswap V3 via [`AegisUniswapAdapter.sol`](contracts/contracts/AegisUniswapAdapter.sol).
 
 ### Anthropic: Claude strategy planner
 - `POST /api/agent/propose` asks Claude for a structured plan: strategy type, token pair, Uniswap hop, a plain-English summary, rationale and risk notes. Claude sees the agent's real threshold and remaining daily limit.
