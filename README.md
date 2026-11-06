@@ -22,22 +22,23 @@
 
 1. [The problem](#-the-problem)
 2. [How AegisNet solves it](#-how-aegisnet-solves-it)
-3. [Human Approval Gate Architecture](#-human-approval-gate-architecture)
-4. [Deployed contracts (Sepolia)](#-deployed-contracts-sepolia)
-5. [Live onchain proof](#-live-onchain-proof)
-6. [Integrations](#-integrations)
-7. [Architecture](#-architecture)
-8. [How a trade flows](#-how-a-trade-flows)
-9. [Security model](#-security-model)
-10. [Repository structure](#-repository-structure)
-11. [Getting started](#-getting-started)
-12. [Configuration](#-configuration)
-13. [REST API](#-rest-api)
-14. [Smart contract reference](#-smart-contract-reference)
-15. [Testing](#-testing)
-16. [Deployment](#-deployment)
-17. [Known limitations & roadmap](#-known-limitations--roadmap)
-18. [License](#-license)
+3. [An autonomous agent cannot move high-value funds without a verified human](#-an-autonomous-agent-cannot-move-high-value-funds-without-a-verified-human)
+4. [Human Approval Gate Architecture](#-human-approval-gate-architecture)
+5. [Deployed contracts (Sepolia)](#-deployed-contracts-sepolia)
+6. [Live onchain proof](#-live-onchain-proof)
+7. [Integrations](#-integrations)
+8. [Architecture](#-architecture)
+9. [How a trade flows](#-how-a-trade-flows)
+10. [Security model](#-security-model)
+11. [Repository structure](#-repository-structure)
+12. [Getting started](#-getting-started)
+13. [Configuration](#-configuration)
+14. [REST API](#-rest-api)
+15. [Smart contract reference](#-smart-contract-reference)
+16. [Testing](#-testing)
+17. [Deployment](#-deployment)
+18. [Known limitations & roadmap](#-known-limitations--roadmap)
+19. [License](#-license)
 
 ---
 
@@ -61,6 +62,45 @@ To trade on your behalf, an AI agent needs a wallet key. That creates three crit
 | **Kill switch** | The owner can cancel any pending trade, lower limits or revoke the agent in one transaction. | `AegisSubnameRegistry`, `AegisExecutionManager` |
 
 **The result:** small trades run autonomously, large trades require human authorization, and unauthorized or malicious actions are blocked before execution.
+
+---
+
+## 👤 An Autonomous Agent Cannot Move High-Value Funds Without a Verified Human
+
+In modern agentic architectures, giving an autonomous agent direct, unconstrained access to a private key creates existential risk:
+- **Prompt Injection & Model Hallucinations:** Adversarial inputs or model errors could lead an agent to dump treasury assets or interact with malicious drains.
+- **Runaway Automated Loops:** Algorithmic failures can churn transactions, bleeding capital on slippage and gas.
+- **Private Key Exfiltration:** A compromised agent bot server or runtime environment compromises the entire wallet balance.
+
+AegisNet solves this with an unbypassable, onchain cryptographic guarantee: **an autonomous agent cannot move high-value funds without a verified human.**
+
+### How the Invariant is Enforced
+
+1. **Subname-Scoped Identity & Delegation:**
+   Every agent is bound to an ENS subname (e.g. `agent.vitalik.aegisnet.eth`). The human owner configures strict guardrails on `AegisSubnameRegistry`:
+   - Target contract whitelists (e.g. only 1inch SwapVM and Uniswap v4 Hook)
+   - Maximum daily spending limit (e.g. $50,000 / day with daily rollover)
+   - Human approval threshold (e.g. $1,000 USD)
+
+2. **Onchain Interception:**
+   When an autonomous agent submits a transaction proposal via `AegisExecutionManager.requestExecution`:
+   - If $\text{valueUSD} < \text{threshold}$, the transaction executes immediately.
+   - If $\text{valueUSD} \ge \text{threshold}$, execution is **strictly paused onchain**. The contract generates an immutable `ExecutionRequested` event with a 15-minute countdown deadline.
+
+3. **World ID Agent Pass Human Checkpoint:**
+   The backend creates an isolated verification session following [World ID Human Continuity & Agent Pass guidelines](https://auth.world.org/docs):
+   - The human operator is prompted via an interactive Human Checkpoint modal displaying the exact trade parameters (target, tokens, slippage, and value).
+   - The human verifies their proof-of-humanity via the World ID Agent Pass.
+   - The backend validates the proof server-side and checks that the human nullifier is bound 1-to-1 to the agent's registered owner address.
+
+4. **Cryptographic Attestation & Atomic Execution:**
+   - Only upon successful verification does the trusted relayer issue an ECDSA signature over `(requestId, nullifier, deadline)`.
+   - The atomic call `approveWithRelayer(requestId, nullifier, deadline, sig)` verifies the relayer signature, marks the single-use nullifier as consumed to prevent replay attacks, binds the owner, and settles the trade in a single transaction.
+
+5. **Fail-Safe Invariants:**
+   - **Denied:** If the human clicks **Deny**, the relayer permanently refuses to sign, and the autonomous trade never executes.
+   - **Expired:** If 15 minutes elapse without approval, `approveWithRelayer` reverts with `"AegisManager: deadline expired"`. Anyone can cancel expired requests.
+   - **Cancelled:** The agent owner can cancel the request at any time onchain via `cancelExecution`.
 
 ---
 
