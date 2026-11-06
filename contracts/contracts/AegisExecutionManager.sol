@@ -82,18 +82,9 @@ contract AegisExecutionManager {
         emit RelayerSignerUpdated(oldSigner, _signer);
     }
 
-    /**
-     * @notice Bind an agent owner address to a verified human nullifier (1-to-1 bidirectional)
-     * @param ownerAddress Address of the subname agent owner
-     * @param nullifier Unique human nullifier hash
-     */
-    function bindOwnerNullifier(address ownerAddress, uint256 nullifier) public {
+    function _bindOwnerNullifier(address ownerAddress, uint256 nullifier) internal {
         require(ownerAddress != address(0), "AegisManager: invalid owner address");
         require(nullifier != 0, "AegisManager: invalid nullifier");
-        require(
-            msg.sender == ownerAddress || msg.sender == owner || msg.sender == relayerSigner,
-            "AegisManager: unauthorized binding caller"
-        );
 
         address existingOwner = nullifierToOwner[nullifier];
         require(
@@ -112,6 +103,19 @@ contract AegisExecutionManager {
             nullifierToOwner[nullifier] = ownerAddress;
             emit OwnerNullifierBound(ownerAddress, nullifier);
         }
+    }
+
+    /**
+     * @notice Bind an agent owner address to a verified human nullifier (1-to-1 bidirectional)
+     * @param ownerAddress Address of the subname agent owner
+     * @param nullifier Unique human nullifier hash
+     */
+    function bindOwnerNullifier(address ownerAddress, uint256 nullifier) public {
+        require(
+            msg.sender == ownerAddress || msg.sender == owner || msg.sender == relayerSigner,
+            "AegisManager: unauthorized binding caller"
+        );
+        _bindOwnerNullifier(ownerAddress, nullifier);
     }
 
     /**
@@ -180,7 +184,7 @@ contract AegisExecutionManager {
     }
 
     /**
-     * @notice Approve execution via trusted relayer ECDSA signature
+     * @notice Approve execution via trusted relayer ECDSA signature (legacy 3-arg flow)
      * @param requestId Pending execution request ID
      * @param nullifierHash Single-use nullifier derived from human approval session
      * @param signature Cryptographic relayer signature attesting human approval
@@ -203,10 +207,53 @@ contract AegisExecutionManager {
         address recovered = recoverSigner(ethSignedHash, signature);
         require(recovered == relayerSigner, "AegisManager: invalid relayer signature");
 
+        (, , bytes32 subnameNode) = registry.isAgentAuthorized(req.agentAddress, req.targetContract, req.valueUSD);
+        IAegisSubnameRegistry.AgentPermissions memory perm = registry.getAgentPermissions(subnameNode);
+        _bindOwnerNullifier(perm.ownerAddress, nullifierHash);
+
         usedNullifiers[nullifierHash] = true;
         req.isVerified = true;
 
         emit ExecutionApproved(requestId, nullifierHash);
+    }
+
+    /**
+     * @notice Approve and execute trade with relayer-signed World ID Agent Pass attestation
+     * @param requestId The execution request ID
+     * @param nullifierHash Single-use human nullifier hash
+     * @param deadline Attestation expiry deadline
+     * @param signature Cryptographic relayer signature attesting human approval
+     */
+    function approveWithRelayer(
+        bytes32 requestId,
+        uint256 nullifierHash,
+        uint256 deadline,
+        bytes calldata signature
+    ) public returns (bool success, bytes memory returnData) {
+        ExecutionRequest storage req = executionRequests[requestId];
+        require(req.requestId != bytes32(0), "AegisManager: non-existent request");
+        require(!req.isExecuted, "AegisManager: already executed");
+        require(!req.isCancelled, "AegisManager: request cancelled");
+        require(block.timestamp <= req.deadline, "AegisManager: request expired");
+        require(block.timestamp <= deadline, "AegisManager: deadline expired");
+        require(!usedNullifiers[nullifierHash], "AegisManager: nullifier used");
+
+        bytes32 hash = keccak256(abi.encodePacked(requestId, nullifierHash, deadline, address(this), block.chainid));
+        bytes32 ethSignedHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
+
+        address recovered = recoverSigner(ethSignedHash, signature);
+        require(recovered == relayerSigner, "AegisManager: invalid relayer signature");
+
+        (, , bytes32 subnameNode) = registry.isAgentAuthorized(req.agentAddress, req.targetContract, req.valueUSD);
+        IAegisSubnameRegistry.AgentPermissions memory perm = registry.getAgentPermissions(subnameNode);
+        _bindOwnerNullifier(perm.ownerAddress, nullifierHash);
+
+        usedNullifiers[nullifierHash] = true;
+        req.isVerified = true;
+
+        emit ExecutionApproved(requestId, nullifierHash);
+
+        return _executeTransaction(requestId, subnameNode);
     }
 
     /**

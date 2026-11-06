@@ -59,6 +59,13 @@ interface IAegisExecutionManager {
         bytes calldata signature
     ) external;
 
+    function approveWithRelayer(
+        bytes32 requestId,
+        uint256 nullifierHash,
+        uint256 deadline,
+        bytes calldata signature
+    ) external returns (bool success, bytes memory returnData);
+
     function verifyBiometricsWithRelayer(
         bytes32 requestId,
         uint256 nullifierHash,

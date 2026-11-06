@@ -24,6 +24,7 @@ export const RegistryABI = [
 export const ManagerABI = [
   'function requestExecution(address targetContract, bytes callData, uint256 valueUSD) returns (bytes32 requestId, bool requiresBiometrics)',
   'function approveWithRelayer(bytes32 requestId, uint256 nullifierHash, bytes signature)',
+  'function approveWithRelayer(bytes32 requestId, uint256 nullifierHash, uint256 deadline, bytes signature) returns (bool success, bytes returnData)',
   'function verifyBiometricsWithRelayer(bytes32 requestId, uint256 nullifierHash, bytes signature)',
   'function executeVerifiedTransaction(bytes32 requestId) returns (bool success, bytes returnData)',
   'function cancelExecution(bytes32 requestId)',

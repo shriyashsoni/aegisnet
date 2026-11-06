@@ -641,6 +641,212 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
       expect(await executionManager.ownerToNullifier(user.address)).to.equal(nullifierB);
       expect(await executionManager.nullifierToOwner(nullifierB)).to.equal(user.address);
     });
+
+    it("Should verify and immediately execute trade with World ID Agent Pass approveWithRelayer(requestId, nullifier, deadline, sig)", async function () {
+      const instructions = [{
+        opcode: 1,
+        tokenIn: await mockToken.getAddress(),
+        tokenOut: await mockToken.getAddress(),
+        amountIn: ethers.parseEther("2000"),
+        minAmountOut: ethers.parseEther("1980"),
+        extraData: "0x"
+      }];
+      const encodedCall = swapVMAdapter.interface.encodeFunctionData("executeSwapVMRoute", [
+        ethers.AbiCoder.defaultAbiCoder().encode(
+          ["tuple(uint8 opcode, address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, bytes extraData)[]"],
+          [instructions]
+        )
+      ]);
+      const highValUSD = ethers.parseEther("2000");
+
+      const reqTx = await executionManager.connect(agent).requestExecution(
+        await swapVMAdapter.getAddress(),
+        encodedCall,
+        highValUSD
+      );
+      const reqReceipt = await reqTx.wait();
+      const reqEvent = reqReceipt.logs.find(log => log.fragment && log.fragment.name === "ExecutionRequested");
+      const requestId = reqEvent.args.requestId;
+
+      const latestBlock = await ethers.provider.getBlock("latest");
+      const deadline = latestBlock.timestamp + 15 * 60;
+      const nullifier = 999888777111n;
+
+      const managerAddr = await executionManager.getAddress();
+      const network = await ethers.provider.getNetwork();
+      const messageHash = ethers.solidityPackedKeccak256(
+        ["bytes32", "uint256", "uint256", "address", "uint256"],
+        [requestId, nullifier, deadline, managerAddr, network.chainId]
+      );
+      const sig = await relayer.signMessage(ethers.getBytes(messageHash));
+
+      // Execute via 4-argument approveWithRelayer
+      const approveTx = await executionManager.connect(user)["approveWithRelayer(bytes32,uint256,uint256,bytes)"](
+        requestId,
+        nullifier,
+        deadline,
+        sig
+      );
+      const approveReceipt = await approveTx.wait();
+
+      const approvedEvent = approveReceipt.logs.find(log => log.fragment && log.fragment.name === "ExecutionApproved");
+      expect(approvedEvent).to.not.be.undefined;
+
+      const executedEvent = approveReceipt.logs.find(log => log.fragment && log.fragment.name === "ExecutionExecuted");
+      expect(executedEvent).to.not.be.undefined;
+      expect(executedEvent.args.success).to.be.true;
+
+      const req = await executionManager.getExecutionRequest(requestId);
+      expect(req.isVerified).to.be.true;
+      expect(req.isExecuted).to.be.true;
+      expect(await executionManager.isNullifierUsed(nullifier)).to.be.true;
+    });
+
+    it("Should prevent execution and leave trade unexecuted on human denial (denied path)", async function () {
+      const instructions = [{
+        opcode: 1,
+        tokenIn: await mockToken.getAddress(),
+        tokenOut: await mockToken.getAddress(),
+        amountIn: ethers.parseEther("3000"),
+        minAmountOut: ethers.parseEther("2970"),
+        extraData: "0x"
+      }];
+      const encodedCall = swapVMAdapter.interface.encodeFunctionData("executeSwapVMRoute", [
+        ethers.AbiCoder.defaultAbiCoder().encode(
+          ["tuple(uint8 opcode, address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, bytes extraData)[]"],
+          [instructions]
+        )
+      ]);
+
+      const reqTx = await executionManager.connect(agent).requestExecution(
+        await swapVMAdapter.getAddress(),
+        encodedCall,
+        ethers.parseEther("3000")
+      );
+      const reqReceipt = await reqTx.wait();
+      const reqEvent = reqReceipt.logs.find(log => log.fragment && log.fragment.name === "ExecutionRequested");
+      const requestId = reqEvent.args.requestId;
+
+      // Human explicitly denies the trade: relayer refuses to issue an attestation
+      // Autonomous agent cannot execute without human approval
+      await expect(
+        executionManager.connect(agent).executeVerifiedTransaction(requestId)
+      ).to.be.revertedWith("AegisManager: pending human approval");
+
+      const req = await executionManager.getExecutionRequest(requestId);
+      expect(req.isVerified).to.be.false;
+      expect(req.isExecuted).to.be.false;
+    });
+
+    it("Should reject approveWithRelayer and leave trade unexecuted on expired deadline (expired path)", async function () {
+      const instructions = [{
+        opcode: 1,
+        tokenIn: await mockToken.getAddress(),
+        tokenOut: await mockToken.getAddress(),
+        amountIn: ethers.parseEther("2500"),
+        minAmountOut: ethers.parseEther("2475"),
+        extraData: "0x"
+      }];
+      const encodedCall = swapVMAdapter.interface.encodeFunctionData("executeSwapVMRoute", [
+        ethers.AbiCoder.defaultAbiCoder().encode(
+          ["tuple(uint8 opcode, address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, bytes extraData)[]"],
+          [instructions]
+        )
+      ]);
+
+      const reqTx = await executionManager.connect(agent).requestExecution(
+        await swapVMAdapter.getAddress(),
+        encodedCall,
+        ethers.parseEther("2500")
+      );
+      const reqReceipt = await reqTx.wait();
+      const reqEvent = reqReceipt.logs.find(log => log.fragment && log.fragment.name === "ExecutionRequested");
+      const requestId = reqEvent.args.requestId;
+
+      const latestBlock = await ethers.provider.getBlock("latest");
+      const deadline = latestBlock.timestamp + 10 * 60; // 10 minute deadline
+      const nullifier = 777666555444n;
+
+      const managerAddr = await executionManager.getAddress();
+      const network = await ethers.provider.getNetwork();
+      const messageHash = ethers.solidityPackedKeccak256(
+        ["bytes32", "uint256", "uint256", "address", "uint256"],
+        [requestId, nullifier, deadline, managerAddr, network.chainId]
+      );
+      const sig = await relayer.signMessage(ethers.getBytes(messageHash));
+
+      // Fast forward past deadline (11 minutes)
+      await time.increase(11 * 60);
+
+      // Attempting to approve an expired attestation must revert
+      await expect(
+        executionManager.connect(user)["approveWithRelayer(bytes32,uint256,uint256,bytes)"](
+          requestId,
+          nullifier,
+          deadline,
+          sig
+        )
+      ).to.be.revertedWith("AegisManager: deadline expired");
+
+      const req = await executionManager.getExecutionRequest(requestId);
+      expect(req.isExecuted).to.be.false;
+    });
+
+    it("Should reject approveWithRelayer and leave trade unexecuted on cancelled request (cancelled path)", async function () {
+      const instructions = [{
+        opcode: 1,
+        tokenIn: await mockToken.getAddress(),
+        tokenOut: await mockToken.getAddress(),
+        amountIn: ethers.parseEther("4000"),
+        minAmountOut: ethers.parseEther("3960"),
+        extraData: "0x"
+      }];
+      const encodedCall = swapVMAdapter.interface.encodeFunctionData("executeSwapVMRoute", [
+        ethers.AbiCoder.defaultAbiCoder().encode(
+          ["tuple(uint8 opcode, address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, bytes extraData)[]"],
+          [instructions]
+        )
+      ]);
+
+      const reqTx = await executionManager.connect(agent).requestExecution(
+        await swapVMAdapter.getAddress(),
+        encodedCall,
+        ethers.parseEther("4000")
+      );
+      const reqReceipt = await reqTx.wait();
+      const reqEvent = reqReceipt.logs.find(log => log.fragment && log.fragment.name === "ExecutionRequested");
+      const requestId = reqEvent.args.requestId;
+
+      // Owner cancels the pending execution request
+      await executionManager.connect(owner).cancelExecution(requestId);
+      const reqAfterCancel = await executionManager.getExecutionRequest(requestId);
+      expect(reqAfterCancel.isCancelled).to.be.true;
+
+      const latestBlock = await ethers.provider.getBlock("latest");
+      const deadline = latestBlock.timestamp + 15 * 60;
+      const nullifier = 333222111000n;
+
+      const managerAddr = await executionManager.getAddress();
+      const network = await ethers.provider.getNetwork();
+      const messageHash = ethers.solidityPackedKeccak256(
+        ["bytes32", "uint256", "uint256", "address", "uint256"],
+        [requestId, nullifier, deadline, managerAddr, network.chainId]
+      );
+      const sig = await relayer.signMessage(ethers.getBytes(messageHash));
+
+      // Attempt to approve cancelled request reverts
+      await expect(
+        executionManager.connect(user)["approveWithRelayer(bytes32,uint256,uint256,bytes)"](
+          requestId,
+          nullifier,
+          deadline,
+          sig
+        )
+      ).to.be.revertedWith("AegisManager: request cancelled");
+
+      const req = await executionManager.getExecutionRequest(requestId);
+      expect(req.isExecuted).to.be.false;
+    });
   });
 
   describe("Phase IV: Uniswap v4 Agent-Gated Hook", function () {
