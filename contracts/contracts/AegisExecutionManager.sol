@@ -52,6 +52,11 @@ contract AegisExecutionManager {
     event ExecutionExecuted(bytes32 indexed requestId, address indexed targetContract, bool success, bytes returnData);
     event ExecutionCancelled(bytes32 indexed requestId);
     event RelayerSignerUpdated(address indexed oldSigner, address indexed newSigner);
+    event OwnerNullifierBound(address indexed owner, uint256 indexed nullifier);
+
+    // 1-to-1 Bidirectional Binding between human nullifier and owner address
+    mapping(address => uint256) public ownerToNullifier;
+    mapping(uint256 => address) public nullifierToOwner;
 
     modifier onlyOwner() {
         require(msg.sender == owner, "AegisManager: caller is not owner");
@@ -75,6 +80,38 @@ contract AegisExecutionManager {
         address oldSigner = relayerSigner;
         relayerSigner = _signer;
         emit RelayerSignerUpdated(oldSigner, _signer);
+    }
+
+    /**
+     * @notice Bind an agent owner address to a verified human nullifier (1-to-1 bidirectional)
+     * @param ownerAddress Address of the subname agent owner
+     * @param nullifier Unique human nullifier hash
+     */
+    function bindOwnerNullifier(address ownerAddress, uint256 nullifier) public {
+        require(ownerAddress != address(0), "AegisManager: invalid owner address");
+        require(nullifier != 0, "AegisManager: invalid nullifier");
+        require(
+            msg.sender == ownerAddress || msg.sender == owner || msg.sender == relayerSigner,
+            "AegisManager: unauthorized binding caller"
+        );
+
+        address existingOwner = nullifierToOwner[nullifier];
+        require(
+            existingOwner == address(0) || existingOwner == ownerAddress,
+            "AegisManager: nullifier already bound to another owner"
+        );
+
+        uint256 existingNullifier = ownerToNullifier[ownerAddress];
+        require(
+            existingNullifier == 0 || existingNullifier == nullifier,
+            "AegisManager: owner already bound to different nullifier"
+        );
+
+        if (existingNullifier == 0) {
+            ownerToNullifier[ownerAddress] = nullifier;
+            nullifierToOwner[nullifier] = ownerAddress;
+            emit OwnerNullifierBound(ownerAddress, nullifier);
+        }
     }
 
     /**

@@ -608,6 +608,39 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
         executionManager.connect(agent).executeVerifiedTransaction(requestId)
       ).to.be.revertedWith("AegisManager: pending human approval");
     });
+
+    it("Should bind each owner to one verified human nullifier and reject reuse across owners", async function () {
+      const nullifierA = 111222333444n;
+      const nullifierB = 555666777888n;
+
+      // 1. Owner binds nullifierA
+      await executionManager.connect(owner).bindOwnerNullifier(owner.address, nullifierA);
+      expect(await executionManager.ownerToNullifier(owner.address)).to.equal(nullifierA);
+      expect(await executionManager.nullifierToOwner(nullifierA)).to.equal(owner.address);
+
+      // Idempotent binding for same owner and same nullifier
+      await executionManager.connect(owner).bindOwnerNullifier(owner.address, nullifierA);
+
+      // 2. Reject binding the same owner to a different nullifier
+      await expect(
+        executionManager.connect(owner).bindOwnerNullifier(owner.address, nullifierB)
+      ).to.be.revertedWith("AegisManager: owner already bound to different nullifier");
+
+      // 3. Reject reusing an already-bound nullifier for a different owner
+      await expect(
+        executionManager.connect(user).bindOwnerNullifier(user.address, nullifierA)
+      ).to.be.revertedWith("AegisManager: nullifier already bound to another owner");
+
+      // 4. Unauthorized caller cannot bind an arbitrary address
+      await expect(
+        executionManager.connect(user).bindOwnerNullifier(agent.address, nullifierB)
+      ).to.be.revertedWith("AegisManager: unauthorized binding caller");
+
+      // 5. User successfully binds nullifierB
+      await executionManager.connect(user).bindOwnerNullifier(user.address, nullifierB);
+      expect(await executionManager.ownerToNullifier(user.address)).to.equal(nullifierB);
+      expect(await executionManager.nullifierToOwner(nullifierB)).to.equal(user.address);
+    });
   });
 
   describe("Phase IV: Uniswap v4 Agent-Gated Hook", function () {

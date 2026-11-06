@@ -38,9 +38,14 @@ interface IAegisExecutionManager {
     );
     event ExecutionCancelled(bytes32 indexed requestId);
     event RelayerSignerUpdated(address indexed oldSigner, address indexed newSigner);
+    event OwnerNullifierBound(address indexed owner, uint256 indexed nullifier);
 
     function setRelayerSigner(address _signer) external;
     function relayerSigner() external view returns (address);
+
+    function bindOwnerNullifier(address ownerAddress, uint256 nullifier) external;
+    function ownerToNullifier(address ownerAddress) external view returns (uint256);
+    function nullifierToOwner(uint256 nullifier) external view returns (address);
 
     function requestExecution(
         address targetContract,

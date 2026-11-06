@@ -137,11 +137,16 @@ export class WorldIDService {
     // 2. Real proof check
     await this.verifyWithWorld({ ...input, requestId });
 
-    // 3. One human per owner
+    // 3. One human per owner (reject reuse across different owners)
     const worldNullifierHex = ethers.toBeHex(worldNullifier, 32);
     const existing = this.bindingFor(owner);
     if (existing && existing.nullifierHash !== worldNullifierHex) {
       throw new HttpError(403, `Approvals for ${owner} are bound to a different World ID. Only the owner's verified human can approve.`);
+    }
+    for (const [boundOwner, data] of Object.entries(this.bindings)) {
+      if (boundOwner !== owner.toLowerCase() && data.nullifierHash === worldNullifierHex) {
+        throw new HttpError(403, `This World ID nullifier is already bound to owner ${boundOwner}. It cannot be reused across owners.`);
+      }
     }
 
     // 4. Per-request nullifier for the contract's replay protection
