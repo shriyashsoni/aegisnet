@@ -70,13 +70,14 @@ app.get('/api/health', async (_req, res) => {
   const chainId = await getChainId();
   res.json({
     status: 'online',
-    protocol: 'AegisNet: Agentic DeFi Matrix',
+    protocol: 'AegisNet: Guardrailed AI Agent Execution',
     network: chainId === 11155111 ? 'Sepolia' : chainId === 31337 ? 'Local Hardhat' : chainId ? `Chain ${chainId}` : 'RPC unreachable',
     chainId,
     expectedChainId: config.expectedChainId,
     rpcReachable: chainId !== null,
     environment: config.env,
     rootEnsName: config.rootEnsName,
+    approvalThresholdUSD: config.biometricDefaultThresholdUSD,
     biometricThresholdUSD: config.biometricDefaultThresholdUSD,
     relayer: { address: signerAddress, matchesContract: checks.relayerOk, onchain: checks.relayerOnchain },
     uniswapRouter: checks.uniswapRouter,

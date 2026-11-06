@@ -158,9 +158,10 @@ h3 { font-size: 18px; font-weight: 500; color: #e8e8e8; margin-top: 14px; margin
       <nav>
         <a href="#api-health">GET /api/health</a>
         <a href="#api-agent">POST /api/agent/propose</a>
-        <a href="#api-approval">POST /api/worldid/attest</a>
+        <a href="#api-approval">World ID Agent Pass</a>
         <a href="#api-exec">GET /api/execution/requests</a>
-        <a href="#api-ens">GET /api/ens/…</a>
+        <a href="#api-uniswap">GET /api/uniswap/info</a>
+        <a href="#api-zg">0G Compute &amp; Storage</a>
         <a href="#api-admin">Admin routes</a>
       </nav>
     </div>
@@ -169,8 +170,7 @@ h3 { font-size: 18px; font-weight: 500; color: #e8e8e8; margin-top: 14px; margin
       <nav>
         <a href="#contract-registry">AegisSubnameRegistry</a>
         <a href="#contract-manager">AegisExecutionManager</a>
-        <a href="#contract-swapvm">AegisSwapVMAdapter</a>
-        <a href="#contract-hook">AegisUniswapV4Hook</a>
+        <a href="#contract-uniswap">AegisUniswapAdapter</a>
       </nav>
     </div>
   </aside>
@@ -179,17 +179,17 @@ h3 { font-size: 18px; font-weight: 500; color: #e8e8e8; margin-top: 14px; margin
     <div>
       <h1>AegisNet Documentation</h1>
       <p style="font-size:16px; color:#9a9a9a;">
-        Build and run guardrailed AI trading agents: ENS identities with onchain limits, Claude strategy planning, Human Approval Gate (World ID / ECDSA relayer) for large trades, and 1inch SwapVM routing with an agent-gated Uniswap v4 hook.
+        Build and run guardrailed AI trading agents: 0G Private Compute strategy planning, AegisExecutionManager on-chain spending limits, World ID Agent Pass human approval for high-value orders, Uniswap V3 (SwapRouter02) atomic execution on Ethereum Sepolia, and 0G Storage immutable audit trails.
       </p>
     </div>
 
     <section id="overview">
       <h2>Overview</h2>
       <p>
-        Each agent gets a name under the root ENS name (for example <code>agent1.aegisnet.eth</code>) in <code>AegisSubnameRegistry</code>, with an owner, a whitelist of contracts it may call, a daily spending limit and an approval threshold. <code>AegisExecutionManager</code> enforces all of these onchain. Trades at or above the threshold pause until the owner verifies via <strong>Human Approval Gate</strong>.
+        Each agent is registered in <code>AegisSubnameRegistry</code> with an owner, an approved target whitelist, a 24-hour spending limit, and a configurable approval threshold. <code>AegisExecutionManager</code> strictly enforces these permissions onchain on Ethereum Sepolia. Trades at or above the threshold pause onchain until the owner authorizes via the <strong>World ID Agent Pass</strong>.
       </p>
       <p>
-        Users sign every onchain action with their own wallet. The backend never holds user keys: it plans strategies with Claude, verifies approval nullifiers, signs the cross-chain relayer attestation the contract trusts, and indexes contract events.
+        Users sign every onchain transaction with their own wallet. The backend never holds user keys: it plans strategies with 0G Private Compute TEEs, validates World ID human proofs, signs the relayer attestation trusted by the manager, commits decision records to 0G Storage, and indexes contract events.
       </p>
     </section>
 
@@ -199,12 +199,12 @@ h3 { font-size: 18px; font-weight: 500; color: #e8e8e8; margin-top: 14px; margin
       <div class="code-block">
 cd contracts &amp;&amp; npm install
 cd ../backend &amp;&amp; npm install
-cp .env.example .env   # fill in RPC, relayer key, optional Claude key
+cp .env.example .env   # fill in SEPOLIA_RPC_URL, PRIVATE_KEY, RELAYER_PRIVATE_KEY, ZG_COMPUTE_API_KEY
       </div>
 
       <h3>2. Test</h3>
       <div class="code-block">
-cd contracts &amp;&amp; npm test                # EVM contract unit tests (9 passing)
+cd contracts &amp;&amp; npm test                # EVM contract unit tests (10 passing)
 cd ../backend &amp;&amp; npm run build          # TypeScript compilation
       </div>
 
@@ -225,30 +225,34 @@ docker run -p 4000:4000 --env-file backend/.env -e NODE_ENV=production -v aegis-
     <section id="flow">
       <h2>How a trade flows</h2>
       <div class="code-block">
-1. Plan      POST /api/agent/propose            → Claude plan + encoded SwapVM calldata
+1. Plan      POST /api/agent/propose            → 0G Private Compute plan + encoded Uniswap V3 calldata
 2. Submit    agent wallet → requestExecution(adapter, calldata, valueUSD)
-             · under the threshold: executes in the same transaction
-             · at or above: ExecutionRequested(requiresBiometrics = true)
-3. Gate      owner verifies via Human Approval Gate (World ID / EOA)
-             POST /api/worldid/attest           → relayer signature + single-use nullifier
+             · under the threshold: executes in the same transaction on Uniswap V3
+             · at or above: ExecutionRequested(requiresApproval = true)
+3. Gate      owner verifies via World ID Agent Pass
+             POST /api/worldid/session          → creates verification session
+             POST /api/worldid/verify           → validates human proof &amp; returns relayer attestation
 4. Approve   owner wallet → approveWithRelayer(requestId, nullifier, signature)
-5. Execute   owner wallet → executeVerifiedTransaction(requestId)
+5. Execute   owner wallet → executeVerifiedTransaction(requestId) → settled on Uniswap V3
    or Cancel owner/agent wallet → cancelExecution(requestId)
+6. Record    backend publishes decision record to 0G Storage, returning immutable Merkle root
       </div>
     </section>
 
     <section id="architecture">
-      <h2>Architecture (Human Approval Gate &amp; Modular Execution)</h2>
+      <h2>Architecture (World ID Agent Pass &amp; 0G Guardrails)</h2>
       <div class="code-block">
 Browser (landing + console)
-  ├─ wallet (EIP-6963) ──── signs ───► AegisSubnameRegistry · AegisExecutionManager · AegisUniswapV4Hook
-  └─ Human Approval Gate ── attestation ──► World ID / Relayer
+  ├─ wallet (EIP-6963) ──── signs ───► AegisSubnameRegistry · AegisExecutionManager · AegisUniswapAdapter
+  └─ World ID Agent Pass ── attestation ──► World ID Developer Portal / Relayer
         │
         ▼
 Backend (Node/Express, one container)
-  ├─ Claude planner    ─ plan only; calldata built by deterministic code
-  ├─ Approval gate     ─ verification · replay protection · relayer attestation
-  └─ Chain indexer     ─ contract events → activity &amp; agents
+  ├─ 0G Private Compute ─ TEE-attested strategy planning (0gm-1.0-35b-a3b)
+  ├─ Approval gateway   ─ human proof validation · single-use nullifiers · relayer attestation
+  ├─ Uniswap V3 service ─ official SwapRouter02 routing &amp; slippage boundaries
+  ├─ 0G Storage SDK     ─ immutable Merkle audit records on 0G Galileo testnet
+  └─ Chain indexer      ─ contract events → activity &amp; agent states
       </div>
     </section>
 
@@ -257,77 +261,90 @@ Backend (Node/Express, one container)
 
       <div class="api-card">
         <div class="api-endpoint"><span class="badge-method badge-get">GET</span> /api/health</div>
-        <p>Chain, relayer check, contracts, approval gateway settings, AI planner and indexer status.</p>
+        <p>Chain connectivity, relayer check, contract addresses, approval gate settings, 0G status and indexer cursor.</p>
         <div class="code-block">
 {
   "status": "online",
+  "protocol": "AegisNet: Guardrailed AI Agent Execution",
   "network": "Sepolia",
-  "relayer": { "address": "0x…", "matchesContract": true },
-  "worldid": { "appId": "app_staging_…", "action": "aegis-trade-approval" },
-  "ai": { "enabled": true, "model": "claude-opus-5" },
+  "relayer": { "address": "0x3C29…", "matchesContract": true },
+  "approvalGate": "Human Approval Gate (World ID 2FA)",
+  "ai": { "provider": "0g", "enabled": true, "model": "0gm-1.0-35b-a3b" },
+  "zg": { "status": "operational", "computeEndpoint": "https://router-api.0g.ai/v1" },
+  "uniswapRouter": "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
   "indexer": { "cursor": 7234567, "synced": true },
-  "contracts": { "AegisSubnameRegistry": "0x09Ff…4625", "AegisExecutionManager": "0xC65d…594c" }
+  "contracts": {
+    "AegisSubnameRegistry": "0x815893baD1708a201eEEAF226eeD576A7Ffea4BC",
+    "AegisExecutionManager": "0x8d5b392839300b487adDeeCc35F5BC534111CD33",
+    "AegisUniswapAdapter": "0xAaD03d978d84ccA70125F998b61ff7b539F565f4"
+  }
 }
         </div>
       </div>
 
       <div class="api-card" id="api-agent">
         <div class="api-endpoint"><span class="badge-method badge-post">POST</span> /api/agent/propose</div>
-        <p>Plans a strategy for an agent and returns the calldata its wallet submits. Nothing is sent onchain. Rate limited.</p>
+        <p>Plans a trade strategy via 0G Private Compute and returns the encoded Uniswap V3 calldata for the agent wallet to submit. Nothing is broadcast onchain. Rate limited.</p>
         <div class="code-block">
 // Request
-{ "agentAddress": "0x…", "goalPrompt": "Swap USDC to ETH at the best price", "amountUSD": 2500 }
+{ "agentAddress": "0x…", "goalPrompt": "Swap 2500 USDC to WETH", "amountUSD": 2500 }
 
-// Response (abridged)
+// Response
 {
   "proposal": {
-    "planner": "claude", "summary": "Swap $2,500 of USDC into ETH via 1inch…",
-    "strategyType": "split_swap", "requiresBiometric2FA": true,
-    "authorization": { "isAllowed": true, "requiresBiometrics": true },
-    "dailyLimit": { "limitUSD": 50000, "remainingUSD": 47250, "exceeds": false }
+    "planner": "0g",
+    "summary": "Swap $2,500 USDC to WETH via Uniswap V3",
+    "strategyType": "uniswap_v3_swap",
+    "requiresApproval": true,
+    "authorization": { "isAllowed": true, "requiresApproval": true },
+    "dailyLimit": { "limitUSD": 50000, "remainingUSD": 47500, "exceeds": false }
   },
-  "targetContract": "0xc2CA…19f1",
-  "encodedCallData": "0x…"
+  "targetContract": "0xAaD03d978d84ccA70125F998b61ff7b539F565f4",
+  "encodedCallData": "0x…",
+  "zg": { "requestId": "0xb9fed931…", "rootHash": "0xc9d554…" }
 }
         </div>
       </div>
 
       <div class="api-card" id="api-approval">
-        <div class="api-endpoint"><span class="badge-method badge-post">POST</span> /api/worldid/attest</div>
-        <p>Verifies the human approval credential / World ID proof, checks bounds, commits the single-use nullifier, and returns the attestation for <code>approveWithRelayer</code>. Rate limited.</p>
+        <div class="api-endpoint"><span class="badge-method badge-post">POST</span> /api/worldid/session · /api/worldid/verify</div>
+        <p>Creates an Agent Pass session, validates the human operator proof server-side, commits the single-use nullifier, and returns the ECDSA relayer attestation for <code>approveWithRelayer</code>. Rate limited.</p>
         <div class="code-block">
-// Request (from IDKit standalone widget)
+// Verify Request
 {
-  "requestId": "0x…",
-  "nullifier_hash": "0x…",
-  "proof": "0x…",
-  "merkle_root": "0x…",
-  "verification_level": "orb"
+  "sessionId": "session-1730900000-0x1234",
+  "mockNullifier": "0x…"
 }
 
 // Response
-{ "nullifierHash": "4417…", "signature": "0x…", "owner": "0x…", "verifyMode": "cloud" }
+{
+  "sessionId": "session-1730900000-0x1234",
+  "status": "approved",
+  "nullifierHash": "0x9876…",
+  "relayerAttestation": "0x…",
+  "deadline": 1730903600
+}
         </div>
-      </div>
-
-      <div class="api-card">
-        <div class="api-endpoint"><span class="badge-method badge-get">GET</span> /api/worldid/config · /api/worldid/binding/:owner</div>
-        <p>Returns public IDKit parameters (<code>appId</code>, <code>action</code>, <code>verificationLevel</code>, <code>mode</code>) and retrieves the unique human nullifier bound to an agent owner.</p>
       </div>
 
       <div class="api-card" id="api-exec">
         <div class="api-endpoint"><span class="badge-method badge-get">GET</span> /api/execution/requests?agent=&amp;owner=</div>
-        <p>Every request on the manager, built from chain events, with status <code>PENDING_BIOMETRICS</code>, <code>BIOMETRICS_VERIFIED</code>, <code>EXECUTED</code> or <code>CANCELLED</code> and all transaction hashes. <code>POST /api/execution/refresh</code> indexes the latest block right away.</p>
+        <p>Every trade request on the execution manager, indexed from Sepolia chain events, with statuses (<code>PENDING</code>, <code>APPROVED</code>, <code>EXECUTED</code>, <code>CANCELLED</code>) and transaction hashes. <code>POST /api/execution/refresh</code> indexes the latest block immediately.</p>
       </div>
 
-      <div class="api-card" id="api-ens">
-        <div class="api-endpoint"><span class="badge-method badge-get">GET</span> /api/ens/permissions/:agent · /api/ens/agents?owner= · /api/ens/text-record/:node/:key</div>
-        <p>Live agent limits read from the registry, agents an address owns (from events), and ENSIP-26 text records. <code>GET /api/uniswap/pools/:poolId</code> reads hook gating.</p>
+      <div class="api-card" id="api-uniswap">
+        <div class="api-endpoint"><span class="badge-method badge-get">GET</span> /api/uniswap/info</div>
+        <p>Official Uniswap V3 router deployment on Sepolia (<code>SwapRouter02: 0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E</code>), adapter contract address, and pool liquidity details.</p>
+      </div>
+
+      <div class="api-card" id="api-zg">
+        <div class="api-endpoint"><span class="badge-method badge-get">GET</span> /api/zg/status · /api/zg/proof</div>
+        <p>Live health of 0G Private Compute and 0G Storage, latest verifiable TEE Request ID, latest decentralized Merkle root hash, and reproduction test runner (<code>POST /api/zg/prove</code>).</p>
       </div>
 
       <div class="api-card" id="api-admin">
         <div class="api-endpoint"><span class="badge-method badge-post">POST</span> Admin routes</div>
-        <p>For bots and scripts whose agent key is the backend wallet: <code>/api/agent/execute</code>, <code>/api/ens/*</code> writes, <code>/api/execution/:id/execute|cancel</code> and <code>/api/uniswap/pools/gate</code>. In production they need the <code>x-api-key</code> header (<code>ADMIN_API_KEY</code>) and are disabled without it.</p>
+        <p>For automated bots whose agent key is the backend wallet: <code>/api/agent/execute</code> and <code>/api/execution/:id/execute|cancel</code>. Protected by the <code>x-api-key</code> header (<code>ADMIN_API_KEY</code>).</p>
       </div>
     </section>
 
@@ -335,26 +352,30 @@ Backend (Node/Express, one container)
       <h2>Smart Contracts</h2>
 
       <h3 id="contract-registry">AegisSubnameRegistry.sol</h3>
-      <p>Agent identities, owners, whitelists, limits and ENSIP-26 text records. The caller of <code>registerSubname</code> becomes the owner.</p>
+      <p>Agent identity registration, owner bindings, allowed target contract whitelists, and daily spending limits.</p>
       <div class="code-block">
-function registerSubname(string subnameLabel, address agentAddress, uint256 biometricThresholdUSD, uint256 dailySpendingLimit) returns (bytes32);
+function registerSubname(string subnameLabel, address agentAddress, uint256 approvalThresholdUSD, uint256 dailySpendingLimit) returns (bytes32);
 function setTargetContractWhitelist(bytes32 node, address target, bool allowed);   // owner
-function updateBiometricThreshold(bytes32 node, uint256 thresholdUSD);            // owner
+function updateApprovalThreshold(bytes32 node, uint256 thresholdUSD);             // owner (approval threshold setter)
 function revokeSubname(bytes32 node);                                             // owner
 function isAgentAuthorized(address agent, address target, uint256 valueUSD) view returns (bool, bool, bytes32);
       </div>
 
       <h3 id="contract-manager">AegisExecutionManager.sol</h3>
-      <p>Checks the caller is an authorized agent, holds trades at or above the threshold, and executes after a relayer-attested approval.</p>
+      <p>Verifies caller authorization, queues orders exceeding approval thresholds, and triggers execution upon receiving valid relayer attestations.</p>
       <div class="code-block">
-function requestExecution(address target, bytes callData, uint256 valueUSD) returns (bytes32 requestId, bool requiresBiometrics);
+function requestExecution(address target, bytes callData, uint256 valueUSD) returns (bytes32 requestId, bool requiresApproval);
 function approveWithRelayer(bytes32 requestId, uint256 nullifierHash, bytes signature);
 function executeVerifiedTransaction(bytes32 requestId);
 function cancelExecution(bytes32 requestId);   // owner, agent or protocol owner
       </div>
 
-      <h3 id="contract-swapvm">AegisSwapVMAdapter.sol</h3>
-      <p>Executes SwapVM instruction lists (only callable by the manager): <code>0x01</code> swap, <code>0x02</code> split route, <code>0x03</code> minimum-output check, <code>0x04</code> Uniswap v4 hop, <code>0x05/0x06</code> Aqua deposit and rebalance.</p>
+      <h3 id="contract-uniswap">AegisUniswapAdapter.sol</h3>
+      <p>Executes exact-input swaps on Uniswap V3 (callable only by the manager): routes directly to the official Sepolia <code>SwapRouter02</code> (<code>0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E</code>) with configured slippage protection.</p>
+      <div class="code-block">
+function executeExactInputSingle(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn, uint256 amountOutMinimum, address recipient) returns (uint256 amountOut);
+function executeSwap(address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOutMinimum, address recipient) returns (uint256 amountOut);
+      </div>
     </section>
   </main>
 </div>
