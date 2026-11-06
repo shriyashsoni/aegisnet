@@ -841,10 +841,10 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
 
     <div class="network reveal" id="net-table">
       <div class="net-row net-head"><span>Contract</span><span>Address</span><span>Role</span></div>
-      <div class="net-row"><span class="net-name">AegisSubnameRegistry</span><a class="net-addr" href="https://sepolia.etherscan.io/address/0x09FfDB167F80fF9E4C5BE64C24bEbeCF1F4B4625" target="_blank" rel="noopener">0x09Ff…4625</a><span class="net-role">ENS subnames, permissions, text records</span></div>
-      <div class="net-row"><span class="net-name">AegisExecutionManager</span><a class="net-addr" href="https://sepolia.etherscan.io/address/0xC65d65A48cB24CA9bd6df02Ea83Ef44571E5594c" target="_blank" rel="noopener">0xC65d…594c</a><span class="net-role">Request queue, Human Approval Gate, execution</span></div>
-      <div class="net-row"><span class="net-name">AegisSwapVMAdapter</span><a class="net-addr" href="https://sepolia.etherscan.io/address/0xc2CA4DB9A01367fA06F56dcf8681993b517D19f1" target="_blank" rel="noopener">0xc2CA…19f1</a><span class="net-role">1inch SwapVM opcode router</span></div>
-      <div class="net-row"><span class="net-name">AegisUniswapV4Hook</span><a class="net-addr" href="https://sepolia.etherscan.io/address/0x0F491f0D3CfB919A259E69F974Ae772912f13B2e" target="_blank" rel="noopener">0x0F49…3B2e</a><span class="net-role">Agent-gated beforeSwap hook</span></div>
+      <div class="net-row"><span class="net-name">AegisSubnameRegistry</span><a class="net-addr" href="https://sepolia.etherscan.io/address/0x48EEFC9F26181Bd059daCc3EF9fD70F197145373" target="_blank" rel="noopener">0x48EE…5373</a><span class="net-role">ENS subnames, permissions, text records</span></div>
+      <div class="net-row"><span class="net-name">AegisExecutionManager</span><a class="net-addr" href="https://sepolia.etherscan.io/address/0xa7C668691382166eF71534a1996F60F6f218b887" target="_blank" rel="noopener">0xa7C6…b887</a><span class="net-role">Request queue, Human Approval Gate, execution</span></div>
+      <div class="net-row"><span class="net-name">AegisUniswapAdapter</span><a class="net-addr" href="https://sepolia.etherscan.io/address/0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E" target="_blank" rel="noopener">0x3bFA…48E</a><span class="net-role">Real Uniswap V3 onchain swap adapter</span></div>
+      <div class="net-row"><span class="net-name">AegisSwapVMAdapter</span><a class="net-addr" href="https://sepolia.etherscan.io/address/0x3fE49BC40C1f06d3D867ed6AaDA5b21a0cF4c611" target="_blank" rel="noopener">0x3fE4…c611</a><span class="net-role">1inch SwapVM opcode router [OUT OF SCOPE]</span></div>
     </div>
 
     <div class="net-meta reveal">
@@ -1049,21 +1049,42 @@ npm start   # → http://localhost:4000</code></li>
   var onMq = function (e) { if (e.matches) setMenu(false); };
   if (mq.addEventListener) mq.addEventListener('change', onMq); else mq.addListener(onMq);
 
-  // ---- Live data from the backend (falls back to the static Sepolia values above) ----
+  // ---- Live data from backend / deployment config ----
   var ROLES = {
     AegisSubnameRegistry: 'ENS subnames, permissions, text records',
-    AegisExecutionManager: 'Request queue, biometric gate, execution',
-    AegisSwapVMAdapter: '1inch SwapVM opcode router',
-    AegisUniswapV4Hook: 'Agent-gated beforeSwap hook',
-    WorldIDVerifier: 'World ID proof verification'
+    AegisExecutionManager: 'Request queue, Human Approval Gate, execution',
+    AegisUniswapAdapter: 'Real Uniswap V3 onchain swap adapter',
+    AegisSwapVMAdapter: '1inch SwapVM opcode router [OUT OF SCOPE]'
   };
   function esc(v) { return String(v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function setLive(key, text) { document.querySelectorAll('[data-live="' + key + '"]').forEach(function (el) { el.textContent = text; }); }
 
+  function renderContractsTable(contracts) {
+    var names = Object.keys(contracts || {});
+    if (!names.length) return;
+    setLive('contract-count', names.length);
+    var rows = names.map(function (n) {
+      var a = contracts[n];
+      return '<div class="net-row"><span class="net-name">' + esc(n) + '</span>' +
+        '<a class="net-addr" href="https://sepolia.etherscan.io/address/' + esc(a) + '" target="_blank" rel="noopener">' + esc(a.slice(0, 6) + '…' + a.slice(-4)) + '</a>' +
+        '<span class="net-role">' + esc(ROLES[n] || '') + '</span></div>';
+    }).join('');
+    var table = document.getElementById('net-table');
+    table.innerHTML = '<div class="net-row net-head"><span>Contract</span><span>Address</span><span>Role</span></div>' + rows;
+  }
+
   var bases = /^https?:$/.test(location.protocol) ? ['', 'http://localhost:4000'] : ['http://localhost:4000'];
   (function tryBase(i) {
     if (i >= bases.length) {
-      document.getElementById('live-label').textContent = 'Backend offline · showing deployed addresses';
+      fetch('deployment-config.json')
+        .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+        .then(function (cfg) {
+          if (cfg.contracts) renderContractsTable(cfg.contracts);
+          document.getElementById('live-label').textContent = 'Loaded from deployment config';
+        })
+        .catch(function () {
+          document.getElementById('live-label').textContent = 'Backend offline · showing deployed addresses';
+        });
       return;
     }
     fetch(bases[i] + '/api/health')
@@ -1074,18 +1095,7 @@ npm start   # → http://localhost:4000</code></li>
         document.getElementById('live-label').textContent = 'Backend online · ' + (h.network || 'connected');
         if (h.rootEnsName) setLive('root', h.rootEnsName);
         if (h.biometricThresholdUSD != null) setLive('threshold', '$' + Number(h.biometricThresholdUSD).toLocaleString());
-
-        var names = Object.keys(h.contracts || {});
-        if (!names.length) return;
-        setLive('contract-count', names.length);
-        var rows = names.map(function (n) {
-          var a = h.contracts[n];
-          return '<div class="net-row"><span class="net-name">' + esc(n) + '</span>' +
-            '<a class="net-addr" href="https://sepolia.etherscan.io/address/' + esc(a) + '" target="_blank" rel="noopener">' + esc(a.slice(0, 6) + '…' + a.slice(-4)) + '</a>' +
-            '<span class="net-role">' + esc(ROLES[n] || '') + '</span></div>';
-        }).join('');
-        var table = document.getElementById('net-table');
-        table.innerHTML = '<div class="net-row net-head"><span>Contract</span><span>Address</span><span>Role</span></div>' + rows;
+        if (h.contracts) renderContractsTable(h.contracts);
       })
       .catch(function () { tryBase(i + 1); });
   })(0);

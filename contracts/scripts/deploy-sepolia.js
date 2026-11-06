@@ -20,7 +20,13 @@ async function main() {
 
   const rootName = process.env.ENS_ROOT_NAME || "aegisnet.eth";
   const externalNullifier = process.env.WORLD_ID_EXTERNAL_NULLIFIER || 1;
-  const relayerSigner = process.env.RELAYER_ADDRESS || deployer.address;
+  let relayerSigner = process.env.RELAYER_ADDRESS;
+  if (!relayerSigner && process.env.RELAYER_PRIVATE_KEY) {
+    try {
+      relayerSigner = new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY).address;
+    } catch {}
+  }
+  if (!relayerSigner) relayerSigner = deployer.address;
 
   // 1. AegisSubnameRegistry
   console.log("\n1. Deploying AegisSubnameRegistry...");
@@ -71,6 +77,7 @@ async function main() {
     chainId: network.chainId.toString(),
     rootName,
     deployer: deployer.address,
+    relayer: relayerSigner,
     contracts: {
       AegisSubnameRegistry: registryAddr,
       AegisExecutionManager: managerAddr,
@@ -83,7 +90,7 @@ async function main() {
   const outputPath = path.join(__dirname, "../deployment-config.json");
   fs.writeFileSync(outputPath, JSON.stringify(deploymentData, null, 2));
 
-  // Mirror to backend config
+  // Mirror to backend config and frontend
   const backendConfigDir = path.join(__dirname, "../../backend/src/config");
   if (!fs.existsSync(backendConfigDir)) {
     fs.mkdirSync(backendConfigDir, { recursive: true });
@@ -92,6 +99,9 @@ async function main() {
     path.join(backendConfigDir, "contracts.json"),
     JSON.stringify(deploymentData, null, 2)
   );
+
+  const frontendPath = path.join(__dirname, "../../frontend/deployment-config.json");
+  fs.writeFileSync(frontendPath, JSON.stringify(deploymentData, null, 2));
 
   console.log("\n=========================================================");
   console.log("✅ ALL SMART CONTRACTS SUCCESSFULLY DEPLOYED TO SEPOLIA!");

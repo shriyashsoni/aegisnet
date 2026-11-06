@@ -55,7 +55,7 @@
     var map = {
       registry: [cfg.contracts.AegisSubnameRegistry, cfg.abis.registry],
       manager: [cfg.contracts.AegisExecutionManager, cfg.abis.manager],
-      hook: [cfg.contracts.AegisUniswapV4Hook, cfg.abis.hook],
+      uniswapAdapter: [cfg.contracts.AegisUniswapAdapter, cfg.abis.uniswapAdapter],
     };
     return new ethers.Contract(map[name][0], map[name][1], runner);
   }
@@ -107,13 +107,17 @@
     var ev = findEvent(registry, r1, 'SubnameRegistered');
     var node = ev ? ev.args.subnameNode : await registry.agentToNode(opts.agent);
 
-    var r2 = await send('Allow the 1inch SwapVM adapter', function () {
-      return registry.setTargetContractWhitelist(node, cfg.contracts.AegisSwapVMAdapter, true);
+    var r2 = await send('Allow the Uniswap V3 adapter', function () {
+      return registry.setTargetContractWhitelist(node, cfg.contracts.AegisUniswapAdapter, true);
     }, onStatus);
-    var r3 = await send('Allow the Uniswap v4 hook', function () {
-      return registry.setTargetContractWhitelist(node, cfg.contracts.AegisUniswapV4Hook, true);
-    }, onStatus);
-    return { node: node, txHashes: [r1.hash, r2.hash, r3.hash] };
+    var txHashes = [r1.hash, r2.hash];
+    if (cfg.contracts.AegisSwapVMAdapter) {
+      var r3 = await send('Allow the 1inch SwapVM adapter', function () {
+        return registry.setTargetContractWhitelist(node, cfg.contracts.AegisSwapVMAdapter, true);
+      }, onStatus);
+      txHashes.push(r3.hash);
+    }
+    return { node: node, txHashes: txHashes };
   }
 
   async function setWhitelist(node, target, allowed, onStatus) {
@@ -183,9 +187,8 @@
     return send('Cancel trade', function () { return manager.cancelExecution(requestId); }, onStatus);
   }
 
-  async function setPoolGated(label, gated, onStatus) {
-    var hook = contract('hook', await signer());
-    return send(gated ? 'Gate pool to agents' : 'Open pool', function () { return hook.setPoolGated(poolId(label), gated); }, onStatus);
+  async function setPoolGated(_label, _gated, _onStatus) {
+    return Promise.resolve({ hash: '0x0000000000000000000000000000000000000000000000000000000000000000' });
   }
 
   async function balanceOf(address) {

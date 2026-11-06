@@ -18,6 +18,8 @@ let deployedStartBlock: number | undefined = undefined;
 
 // tsc does not copy JSON into dist/, so also look in src/config when running the build
 const deployedConfigPath = [
+  path.resolve(__dirname, '../../../contracts/deployment-config.json'),
+  path.resolve(__dirname, '../../contracts/deployment-config.json'),
   path.join(__dirname, 'contracts.json'),
   path.resolve(__dirname, '../../src/config/contracts.json'),
 ].find((p) => fs.existsSync(p));

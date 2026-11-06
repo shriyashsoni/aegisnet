@@ -14,10 +14,12 @@ async function main() {
   }
 
   const deployment = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-  const { rootName, deployer, contracts } = deployment;
+  const { rootName, deployer, relayer, contracts } = deployment;
+  const relayerSigner = relayer || deployer;
 
   console.log(`Network : Sepolia`);
   console.log(`Deployer: ${deployer}`);
+  console.log(`Relayer : ${relayerSigner}`);
   console.log(`Root ENS: ${rootName}\n`);
 
   const items = [
@@ -29,7 +31,7 @@ async function main() {
     {
       name: "AegisExecutionManager",
       address: contracts.AegisExecutionManager,
-      args: [contracts.AegisSubnameRegistry, 1, deployer],
+      args: [contracts.AegisSubnameRegistry, 1, relayerSigner],
     },
     {
       name: "AegisUniswapAdapter",
