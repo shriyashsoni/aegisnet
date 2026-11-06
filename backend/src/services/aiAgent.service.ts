@@ -216,17 +216,13 @@ export class AIAgentService {
       } else {
         const rules = this.interpretGoal(goalPrompt, opts);
         ({ strategyType, tokenIn, tokenOut, useUniswapV4Hop, rationale } = rules);
-        summary = `${strategyType === 'aqua_position' ? 'Deposit' : 'Swap'} $${amountUSD.toLocaleString('en-US')} of ${tokenIn}${
-          strategyType === 'aqua_position' ? ' into a 1inch Aqua position' : ` into ${tokenOut}`
-        }${useUniswapV4Hop ? ' through the agent-gated Uniswap v4 hook' : ''}.`;
+        summary = `${strategyType === 'aqua_position' ? 'Deposit' : 'Swap'} $${amountUSD.toLocaleString('en-US')} of ${tokenIn} into ${tokenOut} via Uniswap V3.`;
         if (requiresBiometrics) riskNotes.push(`At or above the $${thresholdUSD.toLocaleString('en-US')} threshold, so the owner must approve with World ID.`);
       }
     } else {
       const rules = this.interpretGoal(goalPrompt, opts);
       ({ strategyType, tokenIn, tokenOut, useUniswapV4Hop, rationale } = rules);
-      summary = `${strategyType === 'aqua_position' ? 'Deposit' : 'Swap'} $${amountUSD.toLocaleString('en-US')} of ${tokenIn}${
-        strategyType === 'aqua_position' ? ' into a 1inch Aqua position' : ` into ${tokenOut}`
-      }${useUniswapV4Hop ? ' through the agent-gated Uniswap v4 hook' : ''}.`;
+      summary = `${strategyType === 'aqua_position' ? 'Deposit' : 'Swap'} $${amountUSD.toLocaleString('en-US')} of ${tokenIn} into ${tokenOut} via Uniswap V3.`;
       if (requiresBiometrics) riskNotes.push(`At or above the $${thresholdUSD.toLocaleString('en-US')} threshold, so the owner must approve with World ID.`);
     }
 

@@ -30,13 +30,14 @@ export interface ZGPlannerContext {
 const SYSTEM_PROMPT = `You are the strategy planner for AegisNet running inside 0G Private Compute (TEE-attested decentralized AI).
 AegisNet is a guardrailed execution layer for AI trading agents on Ethereum.
 
-Turn the operator's goal into a plan for the 1inch SwapVM / Uniswap V3 execution layer.
+Turn the operator's goal into a plan for the Uniswap V3 execution layer.
+Be extremely concise. Keep thinking under 100 words. Output valid JSON immediately.
 You only choose the high-level plan; deterministic smart contracts and SDK code encode and execute the onchain transactions.
 
 Available strategy types:
-- "swap": direct aggregator swap (0x01) with minimum-output slippage check (0x03).
-- "split_swap": split order across liquidity sources for large size price efficiency (0x02), then slippage check.
-- "aqua_position": 1inch Aqua self-custodial liquidity position (0x05, 0x06). Use for yield, liquidity, or "earn" goals.
+- "swap": direct Uniswap V3 swap with slippage check.
+- "split_swap": split order across liquidity sources for large size price efficiency, then slippage check.
+- "aqua_position": self-custodial liquidity position. Use for yield, liquidity, or "earn" goals.
 
 Supported tokens: USDC, USDT, DAI, WETH, WBTC. tokenIn and tokenOut must differ. If the operator fixed a token, preserve it.
 
@@ -94,6 +95,8 @@ export class ZGComputeService {
     let response: globalThis.Response;
     let requestId: string = '';
 
+    const timeoutMs = Number(process.env.ZG_COMPUTE_TIMEOUT_MS) || 90_000;
+
     try {
       response = await fetch(url, {
         method: 'POST',
@@ -108,14 +111,21 @@ export class ZGComputeService {
             { role: 'user', content: facts.join('\n') },
           ],
           temperature: 0.1,
+          max_tokens: 2048,
+          reasoning_effort: 'low',
         }),
-        signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (err: any) {
       console.error('[0G Compute] Network connection error:', err.message);
+      const isTimeout =
+        err.name === 'TimeoutError' ||
+        err.message?.includes('timeout') ||
+        err.message?.includes('aborted');
+      const detail = isTimeout ? `timed out after ${Math.round(timeoutMs / 1000)}s` : err.message;
       throw new HttpError(
         503,
-        `0G Private Compute is unreachable (${err.message}). Failed safe: no trade proposed.`
+        `0G Private Compute is unreachable (${detail}). Failed safe: no trade proposed.`
       );
     }
 
@@ -155,19 +165,32 @@ export class ZGComputeService {
       throw new HttpError(503, fullMsg);
     }
 
-    if (!json || !json.choices || !json.choices.length || !json.choices[0].message?.content) {
+    let rawContent = (json?.choices?.[0]?.message?.content || '').trim();
+    if (!rawContent && json?.choices?.[0]?.message?.reasoning_content) {
+      const reasoningMatch = json.choices[0].message.reasoning_content.match(/\{[\s\S]*"strategyType"[\s\S]*\}/);
+      if (reasoningMatch) {
+        rawContent = reasoningMatch[0];
+      }
+    }
+
+    if (!rawContent) {
       throw new HttpError(
         503,
         `0G Private Compute returned an empty or invalid completion${requestId ? ` (Request ID: ${requestId})` : ''}. Failed safe: no trade proposed.`
       );
     }
 
-    const rawContent = json.choices[0].message.content.trim();
-    const cleaned = rawContent
+    let cleaned = rawContent
       .replace(/^```json\s*/i, '')
       .replace(/^```\s*/i, '')
       .replace(/\s*```$/i, '')
       .trim();
+
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+      cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+    }
 
     let parsedObj: any;
     try {

@@ -7,12 +7,12 @@
   var EXPLORER = 'https://sepolia.etherscan.io';
   var FAUCET = 'https://www.alchemy.com/faucets/ethereum-sepolia';
   var OPCODES = {
-    1: ['OP_EXCHANGE_SWAP', '1inch aggregator direct route'],
-    2: ['OP_SPLIT_ROUTE', 'Split across liquidity sources'],
-    3: ['OP_VERIFY_MIN_OUTPUT', 'Slippage safety check'],
-    4: ['OP_UNISWAP_V4_HOP', 'Agent-gated Uniswap v4 hook'],
-    5: ['OP_AQUA_DEPOSIT', '1inch Aqua position deposit'],
-    6: ['OP_AQUA_WITHDRAW', '1inch Aqua position rebalance'],
+    1: ['OP_EXCHANGE_SWAP', 'Uniswap V3 exact input swap'],
+    2: ['OP_SPLIT_ROUTE', 'Multi-pool split execution'],
+    3: ['OP_VERIFY_MIN_OUTPUT', 'Onchain slippage safety verification'],
+    4: ['OP_UNISWAP_V3_DIRECT', 'Direct Uniswap V3 SwapRouter02 call'],
+    5: ['OP_LIQUIDITY_DEPOSIT', 'Concentrated liquidity position deposit'],
+    6: ['OP_LIQUIDITY_REBALANCE', 'Range order liquidity rebalance'],
   };
   var STATUS = {
     REQUESTED: ['Submitted', 's-verified'],
@@ -274,9 +274,13 @@
       return '<option value="' + esc(contracts[name]) + '">' + esc(name) + '</option>';
     }).join('');
 
-    $('#planner-badge').textContent = h.ai && h.ai.enabled ? 'Claude · ' + h.ai.model : 'Rule-based planner';
+    if (h.ai && h.ai.enabled) {
+      var pName = h.ai.provider === '0g' ? '0G Private Compute' : 'Claude';
+      $('#planner-badge').textContent = pName + (h.ai.model ? ' · ' + h.ai.model : '');
+    } else {
+      $('#planner-badge').textContent = 'Rule-based planner';
+    }
     $('#planner-badge').classList.toggle('is-onchain', !!(h.ai && h.ai.enabled));
-    if (h.hookOwner) $('#hook-owner-hint').innerHTML = 'Only the hook owner (' + addrLink(h.hookOwner) + ') can change gating.';
 
     renderGuard();
   }
@@ -597,36 +601,39 @@
       .then(function () { busy(btn, false); });
   });
 
-  function renderPool(res) {
-    return '<dl class="kv"><dt>Pool ID</dt><dd class="mono">' + esc(short(res.poolId, 10, 8)) + ' ' + copyBtn(res.poolId) + '</dd>' +
-      '<dt>Gating</dt><dd>' + (res.isGated ? '<span class="status-pill s-ok">Agents only</span>' : '<span class="status-pill">Open to all</span>') + '</dd>' +
-      (res.txHash ? '<dt>Tx</dt><dd>' + txLink(res.txHash) + '</dd>' : '') + '</dl>';
+  var ADAPTER_UNISWAP = '0xAaD03d978d84ccA70125F998b61ff7b539F565f4';
+
+  var btnQuickWl = $('#btn-quick-whitelist');
+  if (btnQuickWl) {
+    btnQuickWl.addEventListener('click', function () {
+      var box = $('#whitelist-check-result');
+      var node = state.myAgent ? state.myAgent.node : ($('#wl-node') ? $('#wl-node').value.trim() : '');
+      if (!node) return showResult(box, 'err', 'Connect your agent wallet or enter an agent node first.');
+      walletAction(this, box, 'Confirm whitelist in wallet…', function () {
+        return Chain.setWhitelist(node, ADAPTER_UNISWAP, true);
+      }, function (r) {
+        return '<p class="s-ok">AegisUniswapAdapter whitelisted onchain.</p><p>' + txLink(r.hash) + '</p>';
+      });
+    });
   }
 
-  $('#form-pool').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var form = this, btn = form.querySelector('[type=submit]'), box = form.querySelector('[data-result]');
-    var d = formData(form);
-    var owner = state.health && state.health.hookOwner;
-    if (owner && state.wallet.connected && !same(owner, state.wallet.address)) {
-      return showResult(box, 'err', 'Only the hook owner (' + esc(short(owner)) + ') can change pool gating. Your wallet is not the owner.');
-    }
-    var gated = !!d.isGated;
-    walletAction(btn, box, 'Confirm in wallet…', function () { return Chain.setPoolGated(d.poolId, gated); }, function (r) {
-      return renderPool({ poolId: Chain.poolId(d.poolId), isGated: gated, txHash: r.hash });
+  var btnCheckWl = $('#btn-check-whitelist');
+  if (btnCheckWl) {
+    btnCheckWl.addEventListener('click', function () {
+      var box = $('#whitelist-check-result');
+      var node = state.myAgent ? state.myAgent.node : ($('#wl-node') ? $('#wl-node').value.trim() : '');
+      if (!node) return showResult(box, 'err', 'Connect your agent wallet or enter an agent node first.');
+      busy(this, true, 'Checking…');
+      Chain.isWhitelisted(node, ADAPTER_UNISWAP)
+        .then(function (allowed) {
+          showResult(box, allowed ? 'ok' : 'warn',
+            allowed ? '✓ AegisUniswapAdapter is whitelisted and active.'
+                    : '⚠ AegisUniswapAdapter is not whitelisted for this agent yet.');
+        })
+        .catch(function (err) { showResult(box, 'err', esc(err.message)); })
+        .then(function () { busy(btnCheckWl, false); });
     });
-  });
-
-  $('#pool-check').addEventListener('click', function () {
-    var form = $('#form-pool'), btn = this, box = form.querySelector('[data-result]');
-    var poolId = formData(form).poolId;
-    if (!poolId) return showResult(box, 'err', 'Enter a pool ID or label.');
-    busy(btn, true, 'Reading…');
-    api('/api/uniswap/pools/' + encodeURIComponent(poolId))
-      .then(function (res) { showResult(box, '', renderPool(res)); })
-      .catch(function (err) { showResult(box, 'err', esc(err.message)); })
-      .then(function () { busy(btn, false); });
-  });
+  }
 
   // ---------------------------------------------------------------------------
   // AI strategy
@@ -655,7 +662,7 @@
       '<div class="route">' +
         '<div class="route-side"><span class="route-amt">' + usd(p.amountIn) + '</span><span class="route-sym">' + esc(p.tokenInSymbol) + '</span></div>' +
         '<div class="route-arrow"></div>' +
-        '<div class="route-side"><span class="route-amt">' + esc(p.estimatedOutput) + '</span><span class="route-sym">' + esc(p.tokenOutSymbol) + (p.quoteSource === '1inch_api' ? ' (1inch mainnet price)' : ' (estimate)') + '</span></div>' +
+        '<div class="route-side"><span class="route-amt">' + esc(p.estimatedOutput) + '</span><span class="route-sym">' + esc(p.tokenOutSymbol) + (p.quoteSource === 'uniswap_v3' || p.quoteSource === '1inch_api' ? ' (live pool price)' : ' (estimate)') + '</span></div>' +
       '</div>' +
       list(p.rationale, 'rationale') +
       (p.riskNotes && p.riskNotes.length ? '<div class="risk"><strong>Risk notes</strong>' + list(p.riskNotes, 'rationale') + '</div>' : '') +
@@ -774,7 +781,7 @@
       return propose({ agentAddress: agent, goalPrompt: d.goalPrompt || 'Swap USDC to ETH at the best price', amountUSD: amount });
     }).then(function (res) {
       if (res.proposal.authorization && !res.proposal.authorization.isAllowed) {
-        throw new Error('The onchain check failed: the SwapVM adapter is not whitelisted for this agent.');
+        throw new Error('The onchain check failed: the Uniswap adapter is not whitelisted for this agent.');
       }
       var dl = res.proposal.dailyLimit;
       if (dl && dl.exceeds) {
@@ -782,7 +789,8 @@
       }
       setStep('strategy', 'done');
       setStep('submit', 'active');
-      showExecResult('Plan: ' + res.proposal.summary, [['Planner', res.proposal.planner === 'claude' ? 'Claude' : 'Rules']], '');
+      var pLabel = res.proposal.planner === '0g' ? ('0G (' + (res.proposal.plannerModel || '0gm-1.0-35b-a3b') + ')') : (res.proposal.planner === 'claude' ? 'Claude' : 'Rules');
+      showExecResult('Plan: ' + res.proposal.summary, [['Planner', pLabel]], '');
       return Chain.requestExecution(res.targetContract, res.encodedCallData, amount, function (s) {
         if (s.step === 'sign') btn.textContent = 'Confirm in wallet…';
         if (s.step === 'pending') btn.textContent = 'Waiting for Sepolia…';

@@ -116,3 +116,4 @@ console.log(`• Performance:    ${performanceScore} / 100 (Zero layout shifts, 
 console.log(`• Accessibility:  ${accessibilityScore} / 100 (Semantic landmarks, WCAG AA/AAA contrast, aria-expanded accordions)`);
 console.log(`• Best Practices: ${bestPracticesScore} / 100 (No vulnerabilities, HTTPS assets, strict Doctype)`);
 console.log(`• SEO:            ${seoScore} / 100 (Structured meta title, description, Open Graph SVG, crawler friendly)`);
+

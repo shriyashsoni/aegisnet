@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="description" content="AegisNet Console: Manage autonomous agent subnames, configure biometric thresholds, plan strategies via 0G Private Compute, and authorize executions via World ID.">
+<meta name="description" content="AegisNet Console: Manage autonomous agent identities, configure approval thresholds, plan strategies via 0G Private Compute, and authorize executions via World ID.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Console — AegisNet">
-<meta property="og:description" content="Manage autonomous agent subnames, configure biometric thresholds, plan strategies via 0G Private Compute, and authorize executions via World ID.">
+<meta property="og:description" content="Manage autonomous agent identities, configure approval thresholds, plan strategies via 0G Private Compute, and authorize executions via World ID.">
 <meta property="og:site_name" content="AegisNet">
 <title>Console — AegisNet</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cg transform='rotate(-30 12 12)'%3E%3Ccircle cx='7.3' cy='3.2' r='1.45'/%3E%3Crect x='5.5' y='4.7' width='3.6' height='14.6' rx='1.8'/%3E%3Crect x='14.9' y='4.7' width='3.6' height='14.6' rx='1.8'/%3E%3Ccircle cx='16.7' cy='20.8' r='1.45'/%3E%3C/g%3E%3C/svg%3E">
@@ -68,7 +68,7 @@
           Live on Ethereum Sepolia
         </span>
         <h1>Your AI agent's <em>control room</em>.</h1>
-        <p class="lede">Your agent trades on its own. Small trades go through automatically, big ones wait for you to authorize them with the <strong>Human Approval Gate</strong>, and you can stop it at any time. Every action here is backed by onchain verification on Sepolia.</p>
+        <p class="lede">Your agent trades on its own. Small trades go through automatically, big ones wait for you to authorize them with <strong>World ID Agent Pass</strong>, and you can stop it at any time. Every action here is backed by onchain verification on Sepolia.</p>
       </div>
 
       <div class="wallet-card" id="wallet-card">
@@ -93,7 +93,7 @@
       <div class="idea-card">
         <span class="idea-n">2 · The fix</span>
         <h3>A name, limits, and human approval</h3>
-        <p>AegisNet gives each agent an <strong>ENS name</strong> with hard limits written onchain, <strong>0G / Claude AI</strong> plans each trade with verified TEE attestations, and big trades require <strong>Human Approval Gate</strong> clearance.</p>
+        <p>AegisNet gives each agent an <strong>onchain identity</strong> with hard limits written onchain, <strong>0G Private Compute</strong> plans each trade with verifiable AI inference, and big trades require <strong>World ID Agent Pass</strong> clearance.</p>
       </div>
       <div class="idea-arrow" aria-hidden="true">→</div>
       <div class="idea-card idea-card--result">
@@ -251,10 +251,10 @@
         <div class="panel">
           <div class="panel-head"><h2>How a trade flows</h2></div>
           <ol class="phases">
-            <li><span class="phase-n">I</span><div><strong>Identity &amp; limits</strong><p>The agent's address resolves to its ENS name, whitelist, daily limit and approval threshold in AegisSubnameRegistry.</p></div></li>
-            <li><span class="phase-n">II</span><div><strong>AI plan</strong><p>Claude picks the strategy. Deterministic code encodes it as 1inch SwapVM steps with an agent-gated Uniswap v4 hop.</p></div></li>
-            <li><span class="phase-n">III</span><div><strong>Human Approval Gate</strong><p>At or above the threshold, AegisExecutionManager holds the trade until the owner's authorization is attested.</p></div></li>
-            <li><span class="phase-n">IV</span><div><strong>Onchain execution</strong><p>The manager records the spend and runs the approved route in one transaction.</p></div></li>
+            <li><span class="phase-n">I</span><div><strong>Plan (0G Compute)</strong><p>0G Private Compute evaluates market context and yields a verifiable trade proposal with cryptographic request ID.</p></div></li>
+            <li><span class="phase-n">II</span><div><strong>Check (Onchain limits)</strong><p>AegisExecutionManager checks the agent's identity, daily allowance, target whitelist, and single-trade limit in AegisSubnameRegistry.</p></div></li>
+            <li><span class="phase-n">III</span><div><strong>Approve (World ID)</strong><p>Trades at or above the threshold require a World ID zero-knowledge proof, signed by the relayer. Small trades bypass this step.</p></div></li>
+            <li><span class="phase-n">IV</span><div><strong>Execute &amp; record</strong><p>The swap executes on Uniswap V3 (SwapRouter02) on Sepolia, and its permanent audit record is committed to 0G Decentralized Storage.</p></div></li>
           </ol>
         </div>
 
@@ -368,20 +368,21 @@
       </div>
 
       <div class="panel">
-        <div class="panel-head"><h2>Uniswap v4 pool gating</h2></div>
-        <form id="form-pool">
-          <div class="field">
-            <label for="pool-id">Pool ID or label</label>
-            <input id="pool-id" name="poolId" class="mono" placeholder="USDC-WETH or 0x… (bytes32)" required>
-          </div>
-          <label class="toggle"><input type="checkbox" name="isGated" checked><span></span>Agents only (beforeSwap hook)</label>
-          <div class="form-actions">
-            <button class="btn btn-solid" type="submit">Set gating</button>
-            <button class="btn btn-ghost" type="button" id="pool-check">Check status</button>
-          </div>
-          <p class="hint" id="hook-owner-hint">Only the hook owner can change gating.</p>
-          <div class="result" data-result hidden></div>
-        </form>
+        <div class="panel-head"><h2>Whitelisted execution adapters</h2></div>
+        <div class="field">
+          <label>AegisUniswapAdapter (Sepolia)</label>
+          <input id="adapter-address" class="mono" readonly value="0xAaD03d978d84ccA70125F998b61ff7b539F565f4">
+        </div>
+        <div class="field">
+          <label>Canonical Uniswap SwapRouter02</label>
+          <input class="mono" readonly value="0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E">
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-solid" type="button" id="btn-quick-whitelist">Whitelist for my agent</button>
+          <button class="btn btn-ghost" type="button" id="btn-check-whitelist">Check status</button>
+        </div>
+        <p class="hint">Ensures AegisExecutionManager allows trades through the official Uniswap V3 adapter.</p>
+        <div class="result" id="whitelist-check-result" hidden></div>
       </div>
     </div>
   </section>
@@ -390,7 +391,7 @@
   <section class="tab" id="tab-strategy" data-tab="strategy" hidden>
     <div class="tab-head tab-head--left">
       <h1>AI strategy <em>planner</em></h1>
-      <p class="lede">Describe what you want. Claude picks the strategy and explains it, and deterministic code encodes the exact onchain route. Nothing is sent until you trade.</p>
+      <p class="lede">Describe what you want. 0G Private Compute plans the strategy with verifiable AI inference, and deterministic code encodes the exact onchain route. Nothing is sent until you trade.</p>
       <p class="explain"><strong>In simple words:</strong> type a goal like &quot;swap USDC to ETH at the best price&quot;. You get a plain-English plan and whether it will need your World ID approval.</p>
     </div>
 
@@ -459,7 +460,7 @@
         <div class="panel-head"><h2>Live pipeline</h2><span class="status-pill" id="exec-state" hidden></span></div>
         <ol class="pipeline" id="pipeline">
           <li data-step="identity"><span class="dot"></span><div><strong>Identity check</strong><p>Your wallet is a registered, active agent</p></div></li>
-          <li data-step="strategy"><span class="dot"></span><div><strong>AI plan</strong><p>Claude plans the route; code encodes it</p></div></li>
+          <li data-step="strategy"><span class="dot"></span><div><strong>AI plan</strong><p>0G Compute plans the route; code encodes it</p></div></li>
           <li data-step="submit"><span class="dot"></span><div><strong>Signed &amp; submitted</strong><p>Your wallet sends requestExecution to Sepolia</p></div></li>
           <li data-step="gate"><span class="dot"></span><div><strong>Human Approval Gate</strong><p>Owner authorization if at or above threshold</p></div></li>
           <li data-step="execute"><span class="dot"></span><div><strong>Executed onchain</strong><p>AegisExecutionManager runs the route</p></div></li>

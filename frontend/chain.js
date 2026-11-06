@@ -202,12 +202,18 @@
     }
   }
 
+  async function isWhitelisted(node, target) {
+    var registry = contract('registry', await signer());
+    return registry.isTargetContractWhitelisted(node, target);
+  }
+
   window.AegisChain = {
     init: init,
     ready: function () { return !!cfg; },
     reason: reason,
     registerAgent: registerAgent,
     setWhitelist: setWhitelist,
+    isWhitelisted: isWhitelisted,
     setThreshold: setThreshold,
     revoke: revoke,
     setText: setText,

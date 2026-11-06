@@ -40,6 +40,8 @@ async function runCompute(): Promise<{ requestId: string; model: string; content
       },
     ],
     temperature: 0.1,
+    max_tokens: 2048,
+    reasoning_effort: 'low',
   };
 
   try {
@@ -47,7 +49,7 @@ async function runCompute(): Promise<{ requestId: string; model: string; content
       method: 'POST',
       headers,
       body: JSON.stringify(promptBody),
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(90_000),
     });
 
     const headerReqId =
