@@ -41,11 +41,6 @@ async function main() {
       address: contracts.AegisSwapVMAdapter,
       args: [contracts.AegisExecutionManager],
     },
-    {
-      name: "AegisUniswapV4Hook",
-      address: contracts.AegisUniswapV4Hook,
-      args: [contracts.AegisSubnameRegistry, contracts.AegisExecutionManager],
-    },
   ];
 
   for (const item of items) {

@@ -4,7 +4,7 @@ const { time } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("AegisNet Matrix Core Protocol Tests", function () {
   let owner, agent, user, relayer;
-  let registry, executionManager, swapVMAdapter, uniswapAdapter, mockSwapRouter, uniswapHook, mockToken, mockWETH;
+  let registry, executionManager, swapVMAdapter, uniswapAdapter, mockSwapRouter, mockToken, mockWETH;
 
   const ROOT_NAME = "aegisnet.eth";
   const SUBNAME_LABEL = "agent1";
@@ -48,15 +48,7 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
     swapVMAdapter = await SwapVMFactory.deploy(await executionManager.getAddress());
     await swapVMAdapter.waitForDeployment();
 
-    // 5. Deploy Uniswap v4 Agent-Gated Hook
-    const HookFactory = await ethers.getContractFactory("AegisUniswapV4Hook");
-    uniswapHook = await HookFactory.deploy(
-      await registry.getAddress(),
-      await executionManager.getAddress()
-    );
-    await uniswapHook.waitForDeployment();
-
-    // 6. Deploy Mock ERC20 Tokens (USDC & WETH)
+    // 5. Deploy Mock ERC20 Tokens (USDC & WETH)
     const TokenFactory = await ethers.getContractFactory("MockERC20");
     mockToken = await TokenFactory.deploy("USD Coin", "USDC");
     await mockToken.waitForDeployment();
@@ -864,36 +856,7 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
     });
   });
 
-  describe("Phase IV: Uniswap v4 Agent-Gated Hook", function () {
-    it("Should allow gated swap when invoked via AegisExecutionManager for authorized subname", async function () {
-      await registry.connect(owner).registerSubname(
-        SUBNAME_LABEL,
-        agent.address,
-        BIOMETRIC_THRESHOLD,
-        DAILY_LIMIT
-      );
-
-      const subnameNode = await registry.agentToNode(agent.address);
-      await registry.connect(owner).setTargetContractWhitelist(
-        subnameNode,
-        await uniswapHook.getAddress(),
-        true
-      );
-
-      const poolId = ethers.keccak256(ethers.toUtf8Bytes("USDC-WETH-0.05%"));
-      await uniswapHook.connect(owner).setPoolGated(poolId, true);
-
-      // Direct caller check validation
-      const tx = await uniswapHook.connect(agent).beforeSwap(
-        await executionManager.getAddress(),
-        poolId,
-        ethers.parseEther("200")
-      );
-      expect(tx).to.not.be.undefined;
-    });
-  });
-
-  describe("Phase V: 1inch Aqua Protocol & SwapVM Custom Opcode Positions ($7k 1inch Track)", function () {
+  describe("Phase IV: 1inch Aqua Protocol & SwapVM Custom Opcode Positions ($7k 1inch Track)", function () {
     beforeEach(async function () {
       await registry.connect(owner).registerSubname(
         SUBNAME_LABEL,
@@ -978,7 +941,7 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
     });
   });
 
-  describe("Phase VI: Real Uniswap V3 Token Swaps via AegisUniswapAdapter & SwapRouter02", function () {
+  describe("Phase V: Real Uniswap V3 Token Swaps via AegisUniswapAdapter & SwapRouter02", function () {
     let subnameNode;
 
     beforeEach(async function () {

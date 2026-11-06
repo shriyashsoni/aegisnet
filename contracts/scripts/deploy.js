@@ -36,21 +36,24 @@ async function main() {
   await (await registry.setExecutionManager(managerAddr)).wait();
   console.log(`> AegisSubnameRegistry executionManager set to: ${managerAddr}`);
 
-  // 3. AegisSwapVMAdapter
-  console.log("3. Deploying AegisSwapVMAdapter (1inch)...");
+  // 3. AegisUniswapAdapter (Uniswap V3)
+  console.log("3. Deploying AegisUniswapAdapter (Uniswap V3)...");
+  const UniswapAdapter = await ethers.getContractFactory("AegisUniswapAdapter");
+  const uniswapAdapter = await UniswapAdapter.deploy(
+    managerAddr,
+    process.env.UNISWAP_ROUTER_ADDRESS || "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E"
+  );
+  await uniswapAdapter.waitForDeployment();
+  const uniswapAdapterAddr = await uniswapAdapter.getAddress();
+  console.log(`> AegisUniswapAdapter deployed at: ${uniswapAdapterAddr}`);
+
+  // 4. AegisSwapVMAdapter
+  console.log("4. Deploying AegisSwapVMAdapter (1inch)...");
   const SwapVM = await ethers.getContractFactory("AegisSwapVMAdapter");
   const swapVM = await SwapVM.deploy(managerAddr);
   await swapVM.waitForDeployment();
   const swapVMAddr = await swapVM.getAddress();
   console.log(`> AegisSwapVMAdapter deployed at: ${swapVMAddr}`);
-
-  // 4. AegisUniswapV4Hook
-  console.log("4. Deploying AegisUniswapV4Hook (Uniswap v4)...");
-  const Hook = await ethers.getContractFactory("AegisUniswapV4Hook");
-  const hook = await Hook.deploy(registryAddr, managerAddr);
-  await hook.waitForDeployment();
-  const hookAddr = await hook.getAddress();
-  console.log(`> AegisUniswapV4Hook deployed at: ${hookAddr}`);
 
   const deploymentData = {
     network: (await ethers.provider.getNetwork()).name,
@@ -60,8 +63,8 @@ async function main() {
     contracts: {
       AegisSubnameRegistry: registryAddr,
       AegisExecutionManager: managerAddr,
+      AegisUniswapAdapter: uniswapAdapterAddr,
       AegisSwapVMAdapter: swapVMAddr,
-      AegisUniswapV4Hook: hookAddr,
     },
     timestamp: new Date().toISOString(),
   };

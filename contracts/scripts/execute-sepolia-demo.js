@@ -24,12 +24,13 @@ async function main() {
   console.log(`> AegisSubnameRegistry: ${contracts.AegisSubnameRegistry}`);
   console.log(`> AegisExecutionManager: ${contracts.AegisExecutionManager}`);
   console.log(`> AegisSwapVMAdapter   : ${contracts.AegisSwapVMAdapter}`);
-  console.log(`> AegisUniswapV4Hook   : ${contracts.AegisUniswapV4Hook}`);
+  if (contracts.AegisUniswapAdapter) {
+    console.log(`> AegisUniswapAdapter  : ${contracts.AegisUniswapAdapter}`);
+  }
 
   const registry = await ethers.getContractAt("AegisSubnameRegistry", contracts.AegisSubnameRegistry);
   const manager = await ethers.getContractAt("AegisExecutionManager", contracts.AegisExecutionManager);
   const swapVM = await ethers.getContractAt("AegisSwapVMAdapter", contracts.AegisSwapVMAdapter);
-  const hook = await ethers.getContractAt("AegisUniswapV4Hook", contracts.AegisUniswapV4Hook);
 
   const SUBNAME_LABEL = "agent1";
   const agentWallet = deployer.address; // Using deployer as agent for live demo
@@ -60,15 +61,17 @@ async function main() {
     console.log(`ℹ️ Subname already registered. Node: ${subnameNode}`);
   }
 
-  console.log("Whitelisting target contracts (1inch SwapVM & Uniswap v4 Hook)...");
+  console.log("Whitelisting target contracts (1inch SwapVM & Uniswap V3 Adapter)...");
   const wlTx1 = await registry.setTargetContractWhitelist(subnameNode, contracts.AegisSwapVMAdapter, true);
   await wlTx1.wait();
-  const wlTx2 = await registry.setTargetContractWhitelist(subnameNode, contracts.AegisUniswapV4Hook, true);
-  await wlTx2.wait();
+  if (contracts.AegisUniswapAdapter) {
+    const wlTx2 = await registry.setTargetContractWhitelist(subnameNode, contracts.AegisUniswapAdapter, true);
+    await wlTx2.wait();
+  }
   console.log("✅ EAC Whitelisting Complete!");
 
   console.log("Setting ENSIP-26 Agent Text Records...");
-  const txtTx1 = await registry.setTextRecord(subnameNode, "agent.capabilities", "1inch-swapvm,uniswap-v4-hook,yield-arbitrage");
+  const txtTx1 = await registry.setTextRecord(subnameNode, "agent.capabilities", "uniswap-v3,1inch-swapvm,yield-arbitrage");
   await txtTx1.wait();
   const txtTx2 = await registry.setTextRecord(subnameNode, "agent.biometric_threshold", "1000");
   await txtTx2.wait();
@@ -186,16 +189,19 @@ async function main() {
   console.log(`🎉 High-value 1inch Aqua transaction approved & executed on Sepolia! Tx: ${approveTx.hash}`);
 
   // -------------------------------------------------------------
-  // PHASE IV: Uniswap v4 Agent-Gated Hook Test
+  // PHASE IV: Uniswap V3 Execution Adapter Verification
   // -------------------------------------------------------------
   console.log("\n---------------------------------------------------------");
-  console.log("Phase IV: Uniswap v4 Agent-Gated Hook Verification");
+  console.log("Phase IV: Uniswap V3 Execution Adapter Verification");
   console.log("---------------------------------------------------------");
 
-  const poolId = ethers.keccak256(ethers.toUtf8Bytes("USDC-WETH-0.05%"));
-  const hookTx = await hook.beforeSwap(managerAddr, poolId, ethers.parseEther("300"));
-  await hookTx.wait();
-  console.log(`✅ Uniswap v4 Agent-Gated Hook verified! Tx: ${hookTx.hash}`);
+  if (contracts.AegisUniswapAdapter) {
+    const uniswapAdapter = await ethers.getContractAt("AegisUniswapAdapter", contracts.AegisUniswapAdapter);
+    const configuredRouter = await uniswapAdapter.swapRouter();
+    console.log(`✅ AegisUniswapAdapter configured with SwapRouter02 at: ${configuredRouter}`);
+  } else {
+    console.log("ℹ️ AegisUniswapAdapter not deployed in current config, skipping V3 router check.");
+  }
 
   console.log("\n=========================================================");
   console.log("🏆 ALL PHASES SUCCESSFULLY EXECUTED LIVE ON SEPOLIA!");
