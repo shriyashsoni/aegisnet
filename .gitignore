@@ -23,6 +23,7 @@ contracts/cache/
 
 # Runtime data (chain index, World ID bindings)
 backend/data/
+data/
 
 # Local backups & logs
 frontend-backup/

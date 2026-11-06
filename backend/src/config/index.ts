@@ -81,6 +81,14 @@ export const config = {
   // Claude AI strategy planner (falls back to deterministic rules when unset)
   anthropicApiKey: realValue(process.env.ANTHROPIC_API_KEY),
   claudeModel: process.env.CLAUDE_MODEL || 'claude-opus-5',
+  // 0G Private Compute & 0G Storage
+  plannerProvider: (process.env.PLANNER_PROVIDER || '0g').toLowerCase() as '0g' | 'claude',
+  zgComputeApiKey: realValue(process.env.ZG_COMPUTE_API_KEY) || realValue(process.env.ZG_API_KEY),
+  zgComputeEndpoint: process.env.ZG_COMPUTE_ENDPOINT || 'https://router-api.0g.ai/v1',
+  zgComputeModel: process.env.ZG_COMPUTE_MODEL || '0gm-1.0-35b-a3b',
+  zgStorageIndexer: process.env.ZG_STORAGE_INDEXER || 'https://indexer-storage-testnet-turbo.0g.ai',
+  zgStorageRpc: process.env.ZG_STORAGE_RPC || 'https://evmrpc-testnet.0g.ai',
+  zgStoragePrivateKey: realValue(process.env.ZG_STORAGE_PRIVATE_KEY) || realValue(process.env.PRIVATE_KEY) || realValue(process.env.RELAYER_PRIVATE_KEY),
   // First block to index; auto-detected from the manager's deployment when unset
   indexerStartBlock: process.env.INDEXER_START_BLOCK ? parseInt(process.env.INDEXER_START_BLOCK, 10) : deployedStartBlock,
   dataDir: process.env.DATA_DIR || path.resolve(__dirname, '../../data'),

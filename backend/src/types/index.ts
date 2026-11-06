@@ -24,9 +24,15 @@ export type StrategyType = 'swap' | 'split_swap' | 'aqua_position';
 export interface TradeStrategyProposal {
   strategyId: string;
   strategyType: StrategyType;
-  /** Who chose the plan: Claude, or the deterministic fallback rules */
-  planner: 'claude' | 'rules';
+  /** Who chose the plan: 0G Private Compute, Claude, or deterministic fallback rules */
+  planner: '0g' | 'claude' | 'rules';
   plannerModel?: string;
+  /** 0G Private Compute Request ID */
+  zgRequestId?: string | null;
+  /** 0G Storage Merkle Root Hash */
+  zgStorageRootHash?: string | null;
+  /** 0G Storage Explorer URL */
+  zgStorageExplorerUrl?: string | null;
   /** One plain-English sentence describing the plan */
   summary: string;
   rationale: string[];
