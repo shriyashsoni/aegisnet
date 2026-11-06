@@ -8,6 +8,7 @@
     "test": "hardhat test --network hardhat",
     "deploy": "hardhat run scripts/deploy.js",
     "deploy:sepolia": "hardhat run scripts/deploy-sepolia.js",
+    "verify:sepolia": "hardhat run scripts/verify-sepolia.js --network sepolia",
     "demo": "hardhat run scripts/execute-sepolia-demo.js"
   },
   "devDependencies": {
