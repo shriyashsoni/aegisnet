@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="description" content="AegisNet Developer Documentation: Architecture, smart contract specifications, World ID Agent Pass 2FA integration, Uniswap V3 execution, and 0G SDK guides.">
+<meta name="description" content="AegisNet Developer Documentation: Architecture, smart contract specifications, ENS Subname Owner Approval Gate, Uniswap V3 execution, and 0G SDK guides.">
 <meta property="og:type" content="article">
 <meta property="og:title" content="AegisNet — Developer Documentation">
-<meta property="og:description" content="Architecture, smart contract specifications, World ID Agent Pass 2FA integration, Uniswap V3 execution, and 0G SDK guides.">
+<meta property="og:description" content="Architecture, smart contract specifications, ENS Subname Owner Approval Gate, Uniswap V3 execution, and 0G SDK guides.">
 <meta property="og:site_name" content="AegisNet">
 <title>AegisNet — Developer Documentation</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cg transform='rotate(-30 12 12)'%3E%3Ccircle cx='7.3' cy='3.2' r='1.45'/%3E%3Crect x='5.5' y='4.7' width='3.6' height='14.6' rx='1.8'/%3E%3Crect x='14.9' y='4.7' width='3.6' height='14.6' rx='1.8'/%3E%3Ccircle cx='16.7' cy='20.8' r='1.45'/%3E%3C/g%3E%3C/svg%3E">
@@ -158,7 +158,7 @@ h3 { font-size: 18px; font-weight: 500; color: #e8e8e8; margin-top: 14px; margin
       <nav>
         <a href="#api-health">GET /api/health</a>
         <a href="#api-agent">POST /api/agent/propose</a>
-        <a href="#api-approval">World ID Agent Pass</a>
+        <a href="#api-approval">ENS Owner Approval</a>
         <a href="#api-exec">GET /api/execution/requests</a>
         <a href="#api-uniswap">GET /api/uniswap/info</a>
         <a href="#api-zg">0G Compute &amp; Storage</a>
@@ -179,17 +179,17 @@ h3 { font-size: 18px; font-weight: 500; color: #e8e8e8; margin-top: 14px; margin
     <div>
       <h1>AegisNet Documentation</h1>
       <p style="font-size:16px; color:#9a9a9a;">
-        Build and run guardrailed AI trading agents: 0G Private Compute strategy planning, AegisExecutionManager on-chain spending limits, World ID Agent Pass human approval for high-value orders, Uniswap V3 (SwapRouter02) atomic execution on Ethereum Sepolia, and 0G Storage immutable audit trails.
+        Build and run guardrailed AI trading agents: 0G Private Compute strategy planning, AegisExecutionManager on-chain spending limits, ENS Subname Owner Approval Gate for high-value orders, Uniswap V3 (SwapRouter02) atomic execution on Ethereum Sepolia, and 0G Storage immutable audit trails.
       </p>
     </div>
 
     <section id="overview">
       <h2>Overview</h2>
       <p>
-        Each agent is registered in <code>AegisSubnameRegistry</code> with an owner, an approved target whitelist, a 24-hour spending limit, and a configurable approval threshold. <code>AegisExecutionManager</code> strictly enforces these permissions onchain on Ethereum Sepolia. Trades at or above the threshold pause onchain until the owner authorizes via the <strong>World ID Agent Pass</strong>.
+        Each agent is registered in <code>AegisSubnameRegistry</code> with an owner, an approved target whitelist, a 24-hour spending limit, and a configurable approval threshold. <code>AegisExecutionManager</code> strictly enforces these permissions onchain on Ethereum Sepolia. Trades at or above the threshold pause onchain until the registered owner authorizes via the <strong>ENS Owner Human Approval Gate</strong>.
       </p>
       <p>
-        Users sign every onchain transaction with their own wallet. The backend never holds user keys: it plans strategies with 0G Private Compute TEEs, validates World ID human proofs, signs the relayer attestation trusted by the manager, commits decision records to 0G Storage, and indexes contract events.
+        Users sign every onchain transaction with their own wallet. The backend never holds user keys: it plans strategies with 0G Private Compute TEEs, verifies ENS subname owner authorization, signs the relayer attestation trusted by the manager, commits decision records to 0G Storage, and indexes contract events.
       </p>
     </section>
 
@@ -229,27 +229,27 @@ docker run -p 4000:4000 --env-file backend/.env -e NODE_ENV=production -v aegis-
 2. Submit    agent wallet → requestExecution(adapter, calldata, valueUSD)
              · under the threshold: executes in the same transaction on Uniswap V3
              · at or above: ExecutionRequested(requiresApproval = true)
-3. Gate      owner verifies via World ID Agent Pass
-             POST /api/worldid/session          → creates verification session
-             POST /api/worldid/verify           → validates human proof &amp; returns relayer attestation
-4. Approve   owner wallet → approveWithRelayer(requestId, nullifier, signature)
-5. Execute   owner wallet → executeVerifiedTransaction(requestId) → settled on Uniswap V3
+3. Gate      owner authorizes via ENS Owner Approval Gate
+             POST /api/approval/session         → creates verification session
+             POST /api/approval/verify          → validates owner authorization &amp; returns relayer attestation
+4. Approve   owner wallet → approveWithRelayer(requestId, nullifier, deadline, signature)
+5. Execute   atomic execution settles on Uniswap V3 on Sepolia
    or Cancel owner/agent wallet → cancelExecution(requestId)
 6. Record    backend publishes decision record to 0G Storage, returning immutable Merkle root
       </div>
     </section>
 
     <section id="architecture">
-      <h2>Architecture (World ID Agent Pass &amp; 0G Guardrails)</h2>
+      <h2>Architecture (ENSv2 Identity, 0G Guardrails &amp; Uniswap V3)</h2>
       <div class="code-block">
 Browser (landing + console)
   ├─ wallet (EIP-6963) ──── signs ───► AegisSubnameRegistry · AegisExecutionManager · AegisUniswapAdapter
-  └─ World ID Agent Pass ── attestation ──► World ID Developer Portal / Relayer
+  └─ ENS Owner Gate    ──── approves ──► Cryptographic Relayer Attestation
         │
         ▼
 Backend (Node/Express, one container)
   ├─ 0G Private Compute ─ TEE-attested strategy planning (0gm-1.0-35b-a3b)
-  ├─ Approval gateway   ─ human proof validation · single-use nullifiers · relayer attestation
+  ├─ Approval gateway   ─ ENS subname owner authorization · single-use nullifiers · relayer attestation
   ├─ Uniswap V3 service ─ official SwapRouter02 routing &amp; slippage boundaries
   ├─ 0G Storage SDK     ─ immutable Merkle audit records on 0G Galileo testnet
   └─ Chain indexer      ─ contract events → activity &amp; agent states
@@ -268,7 +268,7 @@ Backend (Node/Express, one container)
   "protocol": "AegisNet: Guardrailed AI Agent Execution",
   "network": "Sepolia",
   "relayer": { "address": "0x3C29…", "matchesContract": true },
-  "approvalGate": "Human Approval Gate (World ID 2FA)",
+  "approvalGate": "ENS Owner Human Approval Gate",
   "ai": { "provider": "0g", "enabled": true, "model": "0gm-1.0-35b-a3b" },
   "zg": { "status": "operational", "computeEndpoint": "https://router-api.0g.ai/v1" },
   "uniswapRouter": "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
@@ -307,8 +307,8 @@ Backend (Node/Express, one container)
       </div>
 
       <div class="api-card" id="api-approval">
-        <div class="api-endpoint"><span class="badge-method badge-post">POST</span> /api/worldid/session · /api/worldid/verify</div>
-        <p>Creates an Agent Pass session, validates the human operator proof server-side, commits the single-use nullifier, and returns the ECDSA relayer attestation for <code>approveWithRelayer</code>. Rate limited.</p>
+        <div class="api-endpoint"><span class="badge-method badge-post">POST</span> /api/approval/session · /api/approval/verify</div>
+        <p>Creates an approval session, verifies the registered ENS domain owner, derives the single-use nullifier, and returns the ECDSA relayer attestation for <code>approveWithRelayer</code>. Rate limited.</p>
         <div class="code-block">
 // Verify Request
 {

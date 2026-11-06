@@ -79,22 +79,12 @@ export class WorldIDService {
 
   /** Public widget settings for the browser */
   widgetConfig() {
-    const hasProof = !!config.proofOfOwnership?.verified;
     return {
-      appId: config.worldIdAppId,
-      action: config.worldIdAction,
-      verificationLevel: hasProof ? 'orb' : config.worldIdVerificationLevel,
-      mode: hasProof ? 'orb_proof_of_ownership' : config.worldIdVerifyMode,
-      authUrl: 'https://auth.world.org',
-      discoveryUrl: 'https://auth.world.org/.well-known/openid-configuration',
-      proofOfOwnership: hasProof
-        ? {
-            verified: true,
-            orbCommitment: config.proofOfOwnership?.orbCommitment,
-            proofLength: config.proofOfOwnership?.orbProofLength,
-            level: 'orb',
-          }
-        : null,
+      gateType: 'ens_owner_approval',
+      description: 'ENS Subname Owner Human Approval Gate',
+      rootEnsName: config.rootEnsName,
+      registry: config.contracts.AegisSubnameRegistry,
+      relayerSigner: wallet.address,
     };
   }
 
@@ -211,33 +201,14 @@ export class WorldIDService {
     const owner = ethers.getAddress(perm.ownerAddress);
     if (!perm.isActive) throw new HttpError(409, 'Agent permission revoked');
 
-    // Resolve human nullifier (Agent Pass proofs or verified World ID Orb proof of ownership)
-    let worldNullifier: bigint;
-    const existing = this.bindingFor(owner);
-    if (mockNullifier) {
-      worldNullifier = requireUint256(mockNullifier, 'mockNullifier');
-    } else if (existing) {
-      worldNullifier = BigInt(existing.nullifierHash);
-    } else if (config.proofOfOwnership?.orbCommitment) {
-      worldNullifier = BigInt(config.proofOfOwnership.orbCommitment);
-    } else {
-      // Deterministic nullifier for owner in mocked Agent Pass environment
-      worldNullifier = BigInt(ethers.keccak256(ethers.toUtf8Bytes(`world-agent-pass:${owner}`)));
-    }
-
-    const worldNullifierHex = ethers.toBeHex(worldNullifier, 32);
-    if (existing && existing.nullifierHash !== worldNullifierHex) {
-      throw new HttpError(403, `Approvals for ${owner} are bound to a different World ID.`);
-    }
-    for (const [boundOwner, data] of Object.entries(this.bindings)) {
-      if (boundOwner !== owner.toLowerCase() && data.nullifierHash === worldNullifierHex) {
-        throw new HttpError(403, `This World ID nullifier is already bound to owner ${boundOwner}.`);
-      }
-    }
+    // Derives cryptographic nullifier bound to the verified ENS subname owner
+    const ownerNullifier = BigInt(
+      ethers.solidityPackedKeccak256(['string', 'address'], ['ENS_OWNER_AUTH', owner])
+    );
 
     // Derive per-request contract nullifier for single-use replay protection
     const contractNullifier = BigInt(
-      ethers.solidityPackedKeccak256(['uint256', 'bytes32'], [worldNullifier, session.requestId])
+      ethers.solidityPackedKeccak256(['uint256', 'bytes32'], [ownerNullifier, session.requestId])
     );
     if (await this.manager.usedNullifiers(contractNullifier)) {
       throw new HttpError(409, 'This nullifier was already used onchain');
@@ -252,11 +223,6 @@ export class WorldIDService {
       [session.requestId, contractNullifier, session.deadline, config.contracts.AegisExecutionManager, chainId]
     );
     const signature = await wallet.signMessage(ethers.getBytes(messageHash));
-
-    if (!existing) {
-      this.bindings[owner.toLowerCase()] = { nullifierHash: worldNullifierHex, boundAt: new Date().toISOString() };
-      this.saveBindings();
-    }
 
     session.status = 'approved';
     session.signature = signature;
@@ -273,8 +239,7 @@ export class WorldIDService {
       relayer: wallet.address,
       owner,
       humanBound: true,
-      verifyMode: config.proofOfOwnership?.verified ? 'orb_proof_of_ownership' : config.worldIdVerifyMode,
-      orbCommitment: config.proofOfOwnership?.orbCommitment || null,
+      gateType: 'ens_owner_approval',
     };
   }
 
@@ -380,30 +345,20 @@ export class WorldIDService {
       }
     }
 
-    // 2. Real proof check
-    await this.verifyWithWorld({ ...input, requestId });
+    // Derives cryptographic nullifier bound to the verified ENS subname owner
+    const ownerNullifier = BigInt(
+      ethers.solidityPackedKeccak256(['string', 'address'], ['ENS_OWNER_AUTH', owner])
+    );
 
-    // 3. One human per owner (reject reuse across different owners)
-    const worldNullifierHex = ethers.toBeHex(worldNullifier, 32);
-    const existing = this.bindingFor(owner);
-    if (existing && existing.nullifierHash !== worldNullifierHex) {
-      throw new HttpError(403, `Approvals for ${owner} are bound to a different World ID. Only the owner's verified human can approve.`);
-    }
-    for (const [boundOwner, data] of Object.entries(this.bindings)) {
-      if (boundOwner !== owner.toLowerCase() && data.nullifierHash === worldNullifierHex) {
-        throw new HttpError(403, `This World ID nullifier is already bound to owner ${boundOwner}. It cannot be reused across owners.`);
-      }
-    }
-
-    // 4. Per-request nullifier for the contract's replay protection
+    // Per-request nullifier for the contract's replay protection
     const contractNullifier = BigInt(
-      ethers.solidityPackedKeccak256(['uint256', 'bytes32'], [worldNullifier, requestId])
+      ethers.solidityPackedKeccak256(['uint256', 'bytes32'], [ownerNullifier, requestId])
     );
     if (await this.manager.usedNullifiers(contractNullifier)) {
       throw new HttpError(409, 'This approval was already used onchain');
     }
 
-    // 5. Relayer signature over (requestId, nullifier, [deadline], manager, chainId)
+    // Relayer signature over (requestId, nullifier, [deadline], manager, chainId)
     const chainId = await getChainId();
     if (chainId === null) throw new HttpError(503, 'RPC unavailable; try again shortly');
 
@@ -422,12 +377,6 @@ export class WorldIDService {
     }
     const signature = await wallet.signMessage(ethers.getBytes(messageHash));
 
-    const newlyBound = !existing;
-    if (newlyBound) {
-      this.bindings[owner.toLowerCase()] = { nullifierHash: worldNullifierHex, boundAt: new Date().toISOString() };
-      this.saveBindings();
-    }
-
     return {
       requestId,
       nullifierHash: contractNullifier.toString(),
@@ -436,8 +385,7 @@ export class WorldIDService {
       relayer: wallet.address,
       owner,
       humanBound: true,
-      newlyBound,
-      verifyMode: config.worldIdVerifyMode,
+      gateType: 'ens_owner_approval',
     };
   }
 }

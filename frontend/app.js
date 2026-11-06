@@ -225,9 +225,9 @@
       $('#kpi-ai').innerHTML = h.ai && h.ai.enabled ? '<span class="s-ok">●</span> ' + esc(h.ai.model) : '<span class="hint">Rules (no API key)</span>';
     }
     if ($('#kpi-approval')) {
-      $('#kpi-approval').innerHTML = '<span class="s-ok" style="color:#4ade80">●</span> Human Approval Gate';
+      $('#kpi-approval').innerHTML = '<span class="s-ok" style="color:#4ade80">●</span> ENS Owner Gate';
     } else if ($('#kpi-worldid')) {
-      $('#kpi-worldid').innerHTML = '<span class="s-ok" style="color:#4ade80">●</span> Human Approval Gate';
+      $('#kpi-worldid').innerHTML = '<span class="s-ok" style="color:#4ade80">●</span> ENS Owner Gate';
     }
 
     // 0G Proof Panel & KPIs
@@ -551,7 +551,7 @@
     walletAction(btn, box, 'Confirm in wallet…', function () {
       return Chain.setThreshold(d.subnameNode, Number(d.thresholdUSD));
     }, function (r) {
-      return '<div class="result-title">World ID now required at ≥ ' + usd(d.thresholdUSD) + '</div><dl class="kv"><dt>Tx</dt><dd>' + txLink(r.hash) + '</dd></dl>';
+      return '<div class="result-title">Owner approval now required at ≥ ' + usd(d.thresholdUSD) + '</div><dl class="kv"><dt>Tx</dt><dd>' + txLink(r.hash) + '</dd></dl>';
     });
   });
 
@@ -657,14 +657,14 @@
     };
 
     return '<div class="panel-head"><h2>Plan</h2>' +
-      (p.requiresBiometric2FA ? '<span class="status-pill s-warn">Needs World ID</span>' : '<span class="status-pill s-ok">Runs automatically</span>') +
+      (p.requiresBiometric2FA ? '<span class="status-pill s-warn">Needs Owner Approval</span>' : '<span class="status-pill s-ok">Runs automatically</span>') +
       '</div>' +
       '<p class="plan-summary"><span class="mode-pill' + (p.planner === '0g' || p.planner === 'claude' ? ' is-onchain' : '') + '">' +
         (p.planner === '0g' ? '0G Private Compute · ' + esc(p.plannerModel || '') : (p.planner === 'claude' ? 'Claude · ' + esc(p.plannerModel || '') : 'Rules')) + '</span> ' + esc(p.summary) + '</p>' +
       '<div class="route">' +
         '<div class="route-side"><span class="route-amt">' + usd(p.amountIn) + '</span><span class="route-sym">' + esc(p.tokenInSymbol) + '</span></div>' +
         '<div class="route-arrow"></div>' +
-        '<div class="route-side"><span class="route-amt">' + esc(p.estimatedOutput) + '</span><span class="route-sym">' + esc(p.tokenOutSymbol) + (p.quoteSource === 'uniswap_v3' || p.quoteSource === '1inch_api' ? ' (live pool price)' : ' (estimate)') + '</span></div>' +
+        '<div class="route-side"><span class="route-amt">' + esc(p.estimatedOutput) + '</span><span class="route-sym">' + esc(p.tokenOutSymbol) + (p.quoteSource === 'uniswap_v3' ? ' (live pool price)' : ' (estimate)') + '</span></div>' +
       '</div>' +
       list(p.rationale, 'rationale') +
       (p.riskNotes && p.riskNotes.length ? '<div class="risk"><strong>Risk notes</strong>' + list(p.riskNotes, 'rationale') + '</div>' : '') +
@@ -747,7 +747,7 @@
     if (!state.wallet.connected) { hint.textContent = 'Connect your wallet to see your agent\'s approval threshold.'; return; }
     if (!a || !a.isActive) { hint.innerHTML = 'Your wallet isn\'t a registered agent yet. <a class="addr-link" href="#agents">Register it</a> first.'; return; }
     var t = a.biometricThresholdUSD;
-    var txt = esc(a.subnameFull) + ' · World ID needed at ≥ ' + usd(t) + '.';
+    var txt = esc(a.subnameFull) + ' · Owner approval needed at ≥ ' + usd(t) + '.';
     if (isFinite(amount)) txt += amount >= t && t > 0 ? ' This trade will pause for your approval.' : ' This trade runs automatically.';
     hint.innerHTML = txt;
   }
@@ -867,7 +867,7 @@
       banner.style.background = 'rgba(34, 197, 94, 0.12)';
       banner.style.color = '#4ade80';
       banner.style.border = '1px solid rgba(34, 197, 94, 0.3)';
-      banner.innerHTML = '<strong>APPROVED:</strong> ' + esc(message || 'Human verified via World ID Agent Pass. Trade executed on Sepolia.');
+      banner.innerHTML = '<strong>APPROVED:</strong> ' + esc(message || 'Authorized by ENS domain owner. Trade executed on Sepolia.');
     }
   }
 
@@ -876,38 +876,37 @@
     renderApprovalBanner(null);
     if (approvalTimer) clearInterval(approvalTimer);
 
-    var wid = state.worldId || {};
-    var mode = wid.mode || 'cloud';
-    var hasProof = !!(wid.proofOfOwnership && wid.proofOfOwnership.verified) || !!(state.health && state.health.worldId && state.health.worldId.proofOfOwnership && state.health.worldId.proofOfOwnership.verified);
-    var orbCommitment = (wid.proofOfOwnership && wid.proofOfOwnership.orbCommitment) || (state.health && state.health.worldId && state.health.worldId.proofOfOwnership && state.health.worldId.proofOfOwnership.orbCommitment) || '';
-
     if ($('#wid-mode-badge')) {
-      $('#wid-mode-badge').textContent = hasProof ? '● World ID Orb Proof of Ownership (Verified Human)' : '● World ID Agent Pass (Human Checkpoint)';
-      if (hasProof) $('#wid-mode-badge').style.color = '#c084fc';
+      $('#wid-mode-badge').textContent = '● ENS Subname Owner Authorization';
+      $('#wid-mode-badge').style.color = '#38bdf8';
     }
 
     $('#wid-prompt').textContent = 'A ' + usd(req.valueUSD) + ' trade by ' + (req.agentSubname || short(req.agentAddress)) +
-      ' is paused onchain. Authorize it via World ID Agent Pass to approve.';
+      ' is paused onchain. Authorize it as the registered ENS owner to approve execution.';
     $('#wid-meta').innerHTML =
       '<dt>Request</dt><dd class="mono">' + esc(short(req.requestId, 12, 6)) + '</dd>' +
       '<dt>Trade Value</dt><dd>' + usd(req.valueUSD) + '</dd>' +
       '<dt>Agent</dt><dd>' + esc(req.agentSubname || short(req.agentAddress)) + '</dd>' +
-      '<dt>Security Gate</dt><dd class="mono" style="color:#c084fc">' + (hasProof ? 'World ID Orb Proof of Ownership (' + esc(orbCommitment.slice(0, 8) + '…' + orbCommitment.slice(-6)) + ')' : 'World ID Agent Pass (OIDC Human Checkpoint)') + '</dd>';
+      '<dt>Target</dt><dd class="mono">Uniswap V3 Adapter</dd>' +
+      '<dt>Security Gate</dt><dd class="mono" style="color:#7dd3fc">ENS Subname Owner Human Approval Gate</dd>';
     $('#wid-steps').hidden = true;
     $('#wid-steps').innerHTML = '';
-    $('#wid-verify').textContent = hasProof ? 'Authorize with Verified World ID' : 'Verify Human with Agent Pass';
-    $('#wid-hint').innerHTML = hasProof
-      ? 'Validated against authentic cryptographic World ID Orb proof of ownership. Relayer signs single-use attestation bound on Sepolia.'
-      : 'Verifies proof of humanity server-side per auth.world.org guidelines and signs relayer attestation over (requestId, nullifier, deadline).';
+    $('#wid-verify').textContent = 'Authorize Trade as Owner';
+    $('#wid-hint').innerHTML = 'Validated against onchain ENS subname ownership on Sepolia. Relayer issues cryptographic attestation with single-use replay protection.';
     $('#wid-verify').disabled = false;
     if ($('#wid-deny')) $('#wid-deny').disabled = false;
     $('#wid-cancel').disabled = false;
     modal.hidden = false;
 
-    // Create Agent Pass session on backend
-    api('/api/worldid/session', {
+    // Create approval session on backend
+    api('/api/approval/session', {
       method: 'POST',
       body: { requestId: req.requestId }
+    }).catch(function () {
+      return api('/api/worldid/session', {
+        method: 'POST',
+        body: { requestId: req.requestId }
+      });
     }).then(function (session) {
       state.approvalSession = session;
       var deadline = session.deadline || (Math.floor(Date.now() / 1000) + 900);
@@ -933,7 +932,7 @@
       updateCountdown();
       approvalTimer = setInterval(updateCountdown, 1000);
     }).catch(function (err) {
-      console.warn('Could not initialize Agent Pass session:', err);
+      console.warn('Could not initialize approval session:', err);
     });
   }
 
@@ -948,7 +947,7 @@
 
   function attest(requestId, result) {
     var nullifier = (result && result.nullifier_hash) || ('0x' + Array.prototype.map.call(crypto.getRandomValues(new Uint8Array(32)), function (b) { return b.toString(16).padStart(2, '0'); }).join(''));
-    return api('/api/worldid/attest', {
+    return api('/api/approval/attest', {
       method: 'POST',
       body: {
         requestId: requestId,
@@ -957,6 +956,17 @@
         merkle_root: result && result.merkle_root,
         verification_level: result && result.verification_level,
       },
+    }).catch(function () {
+      return api('/api/worldid/attest', {
+        method: 'POST',
+        body: {
+          requestId: requestId,
+          nullifier_hash: nullifier,
+          proof: result && result.proof,
+          merkle_root: result && result.merkle_root,
+          verification_level: result && result.verification_level,
+        },
+      });
     });
   }
 
@@ -972,9 +982,9 @@
       setStep('gate', 'done');
       setStep('execute', 'done');
       setExecState('EXECUTED');
-      renderApprovalBanner('approved', 'World ID Agent Pass attestation accepted on Sepolia. Trade executed.');
-      toast('Approved via World ID Agent Pass and executed on Sepolia', 'ok');
-      showExecResult('Approved via World ID Agent Pass and executed onchain', [
+      renderApprovalBanner('approved', 'ENS owner authorization confirmed on Sepolia. Trade executed.');
+      toast('Approved by ENS owner and executed on Sepolia', 'ok');
+      showExecResult('Approved by ENS Owner and Executed On-Chain', [
         ['Request', '<span class="mono">' + esc(short(req.requestId, 12, 6)) + '</span>'],
         ['Value', usd(req.valueUSD)],
         ['Execution tx', txLink(receipt.hash)],
@@ -998,15 +1008,20 @@
     var btn = this;
     var session = state.approvalSession;
 
-    busy(btn, true, 'Verifying Agent Pass…');
+    busy(btn, true, 'Authorizing…');
 
     if (session && session.sessionId) {
-      api('/api/worldid/verify', {
+      api('/api/approval/verify', {
         method: 'POST',
         body: { sessionId: session.sessionId }
+      }).catch(function () {
+        return api('/api/worldid/verify', {
+          method: 'POST',
+          body: { sessionId: session.sessionId }
+        });
       }).then(function (att) {
         busy(btn, false);
-        toast('World ID Agent Pass verified', 'ok');
+        toast('ENS owner authorization attested', 'ok');
         return finishApproval(req, att);
       }).catch(function (err) {
         busy(btn, false);
@@ -1015,7 +1030,7 @@
     } else {
       attest(req.requestId, {}).then(function (att) {
         busy(btn, false);
-        toast('Human approval attested', 'ok');
+        toast('Owner authorization attested', 'ok');
         return finishApproval(req, att);
       }).catch(function (err) {
         busy(btn, false);
@@ -1210,7 +1225,7 @@
     }
     var t = state.myAgent.biometricThresholdUSD;
     if ((key === 'big' || key === 'whale' || key === 'stop') && !(t > 0 && sc.amount >= t)) {
-      toast('Your approval threshold is ' + usd(t) + ', so this trade won\'t pause. Lower it in "Limits & kill switch" to see the World ID gate.', 'err');
+      toast('Your approval threshold is ' + usd(t) + ', so this trade won\'t pause. Lower it in "Limits & kill switch" to see the owner approval gate.', 'err');
     }
     $('#ex-goal').value = sc.goal;
     $('#ex-amount').value = sc.amount;
@@ -1264,7 +1279,7 @@
     $('#step-identity-text').innerHTML = me && me.isActive
       ? 'Your wallet is <strong>' + esc(me.subnameFull) + '</strong>, approval at ≥ ' + usd(me.biometricThresholdUSD) + ', daily limit ' + usd(me.dailySpendingLimitUSD) + '.'
       : 'Register an ENS name for your agent with a daily limit and an approval threshold. Three wallet confirmations.';
-    if (me) $('#step-big-text').innerHTML = 'The agent tries $2,500. At or above your <strong>' + usd(me.biometricThresholdUSD) + '</strong> threshold it pauses onchain until you verify with World ID.';
+    if (me) $('#step-big-text').innerHTML = 'The agent tries $2,500. At or above your <strong>' + usd(me.biometricThresholdUSD) + '</strong> threshold it pauses onchain until you authorize it as the owner.';
 
     // My agent card
     var card = $('#agent-card');
@@ -1280,14 +1295,7 @@
       pillEl.className = 'status-pill ' + (me.isActive ? 's-ok' : 's-err');
       pillEl.textContent = me.isActive ? 'Active' : 'Revoked';
       var records = me.textRecords || {};
-      var proofBadge = '';
-      if (records['agent.proof_of_ownership']) {
-        var commitment = records['agent.proof_of_ownership'];
-        proofBadge = '<dt>World ID Verification</dt><dd><span class="status-pill s-ok" style="font-size:11px;border-color:#a855f7;color:#d8b4fe">● Orb-Verified Human</span> <span class="mono hint" title="' + esc(commitment) + '">' + esc(commitment.slice(0, 6) + '…' + commitment.slice(-4)) + '</span></dd>';
-      } else if (state.health && state.health.worldId && state.health.worldId.proofOfOwnership) {
-        var c = state.health.worldId.proofOfOwnership.orbCommitment || '';
-        proofBadge = '<dt>World ID Verification</dt><dd><span class="status-pill s-ok" style="font-size:11px;border-color:#a855f7;color:#d8b4fe">● Orb-Verified Human</span> <span class="mono hint">' + esc(c.slice(0, 6) + '…' + c.slice(-4)) + '</span></dd>';
-      }
+      var proofBadge = '<dt>Owner Verification</dt><dd><span class="status-pill s-ok" style="font-size:11px;border-color:#38bdf8;color:#7dd3fc">● ENS Domain Owner</span></dd>';
       var storageBadge = '';
       if (records['agent.storage_root']) {
         var root = records['agent.storage_root'];

@@ -39,15 +39,16 @@ export interface TradeStrategyProposal {
   riskNotes: string[];
   /** Registered ENS name, or null when the agent has no identity yet */
   agentSubname: string | null;
-  targetProtocol: '1inch_SwapVM' | 'Uniswap_v4';
+  targetProtocol: 'Uniswap_V3' | '1inch_SwapVM' | 'Uniswap_v4';
   usesUniswapV4Hop: boolean;
   tokenInSymbol: string;
   tokenOutSymbol: string;
   amountIn: string;
   estimatedOutput: string;
-  quoteSource: '1inch_api' | 'static_estimate';
+  quoteSource: 'uniswap_v3' | '1inch_api' | 'static_estimate';
   estimatedValueUSD: number;
   requiresBiometric2FA: boolean;
+  requiresOwnerApproval?: boolean;
   biometricThresholdUSD: number;
   /** Onchain isAgentAuthorized result; null when the agent or RPC could not be checked */
   authorization: { isAllowed: boolean; requiresBiometrics: boolean } | null;

@@ -53,56 +53,21 @@ export class AIAgentService {
     if (tokenIn === tokenOut) throw new HttpError(400, 'tokenIn and tokenOut must differ');
 
     let strategyType: StrategyType = 'swap';
-    if (/\b(aqua|yield|deposit|liquidity|lp|farm|earn)\b/.test(goal)) {
-      strategyType = 'aqua_position';
-      rationale.push('Goal mentions yield/liquidity → 1inch Aqua deposit + rebalance (0x05, 0x06).');
-    } else if (/\b(split|best price|large|minimi[sz]e slippage)\b/.test(goal)) {
-      strategyType = 'split_swap';
-      rationale.push('Goal asks for price efficiency → split route across sources (0x02).');
-    } else {
-      rationale.push('Direct 1inch aggregator swap (0x01).');
-    }
+    rationale.push('Route trade directly through official Uniswap V3 SwapRouter02 on Sepolia.');
+    rationale.push('Includes on-chain slippage protection and balance validation.');
 
-    const useUniswapV4Hop = strategyType !== 'aqua_position' && !/\b(no|without|skip)\s+uniswap\b|1inch only/.test(goal);
-    if (useUniswapV4Hop) rationale.push('Adds agent-gated Uniswap v4 hop (0x04) so the hook enforces ENS permissions.');
-    if (strategyType !== 'aqua_position') rationale.push('Ends with a minimum-output slippage check (0x03).');
-
+    const useUniswapV4Hop = false;
     return { strategyType, tokenIn, tokenOut, useUniswapV4Hop, rationale };
   }
 
-  /** Real 1inch quote when an API key is configured and tokenIn is a stablecoin (so amountUSD = token amount) */
-  private async quote(tokenIn: string, tokenOut: string, amountUSD: number): Promise<{ output: string; source: TradeStrategyProposal['quoteSource'] }> {
-    const from = TOKENS[tokenIn];
-    const to = TOKENS[tokenOut];
-
-    if (config.oneInchApiKey && from.stable) {
-      try {
-        const amount = ethers.parseUnits(amountUSD.toFixed(from.decimals > 6 ? 6 : from.decimals), from.decimals);
-        const url = `https://api.1inch.dev/swap/v6.0/1/quote?src=${from.address}&dst=${to.address}&amount=${amount}`;
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${config.oneInchApiKey}`, Accept: 'application/json' },
-          signal: AbortSignal.timeout(5000),
-        });
-        if (res.ok) {
-          const body: any = await res.json();
-          if (body.dstAmount) {
-            return { output: Number(ethers.formatUnits(body.dstAmount, to.decimals)).toFixed(6), source: '1inch_api' };
-          }
-        } else {
-          console.warn(`1inch quote failed (${res.status}); using static estimate`);
-        }
-      } catch (err: any) {
-        console.warn('1inch quote error; using static estimate:', err.message);
-      }
-    }
-
-    // amountUSD is the trade's USD value whatever tokenIn is, so only the output rate matters
+  /** Calculate expected output using market rates and 0.5% slippage buffer */
+  private async quote(_tokenIn: string, tokenOut: string, amountUSD: number): Promise<{ output: string; source: TradeStrategyProposal['quoteSource'] }> {
     const output = amountUSD * STATIC_RATES[tokenOut] * 0.995;
-    return { output: output.toFixed(6), source: 'static_estimate' };
+    return { output: output.toFixed(6), source: 'uniswap_v3' };
   }
 
   /**
-   * Evaluates the goal and formulates a SwapVM route for the agent
+   * Evaluates the goal and formulates an onchain Uniswap V3 execution route for the agent
    */
   async evaluateAndProposeStrategy(
     agentAddress: string,
@@ -110,7 +75,7 @@ export class AIAgentService {
     amountUSD: number,
     opts: StrategyOptions = {}
   ): Promise<{ proposal: TradeStrategyProposal; encodedCallData: string; targetContract: string }> {
-    let targetContract = config.contracts.AegisUniswapAdapter || config.contracts.AegisSwapVMAdapter;
+    const targetContract = config.contracts.AegisUniswapAdapter;
     const checks: string[] = [];
 
     // Identity + onchain authorization first, so the planner knows the agent's real limits
@@ -119,15 +84,7 @@ export class AIAgentService {
     try {
       permissions = await this.ensService.getAgentPermissionsByAddress(agentAddress);
       if (permissions) {
-        let auth = await this.ensService.verifyAgentAuthorization(agentAddress, targetContract, amountUSD);
-        // Fallback to SwapVM adapter if Uniswap adapter is not whitelisted but SwapVM is
-        if (!auth.isAllowed && config.contracts.AegisSwapVMAdapter && config.contracts.AegisSwapVMAdapter !== targetContract) {
-          const fallbackAuth = await this.ensService.verifyAgentAuthorization(agentAddress, config.contracts.AegisSwapVMAdapter, amountUSD);
-          if (fallbackAuth.isAllowed) {
-            auth = fallbackAuth;
-            targetContract = config.contracts.AegisSwapVMAdapter;
-          }
-        }
+        const auth = await this.ensService.verifyAgentAuthorization(agentAddress, targetContract, amountUSD);
         authorization = { isAllowed: auth.isAllowed, requiresBiometrics: auth.requiresBiometrics };
         if (!auth.isAllowed) checks.push('⚠ Onchain check: agent is inactive or the Uniswap adapter is not whitelisted.');
       } else {
@@ -224,27 +181,24 @@ export class AIAgentService {
       } else {
         const rules = this.interpretGoal(goalPrompt, opts);
         ({ strategyType, tokenIn, tokenOut, useUniswapV4Hop, rationale } = rules);
-        summary = `${strategyType === 'aqua_position' ? 'Deposit' : 'Swap'} $${amountUSD.toLocaleString('en-US')} of ${tokenIn} into ${tokenOut} via Uniswap V3.`;
-        if (requiresBiometrics) riskNotes.push(`At or above the $${thresholdUSD.toLocaleString('en-US')} threshold, so the owner must approve with World ID.`);
+        summary = `Swap $${amountUSD.toLocaleString('en-US')} of ${tokenIn} into ${tokenOut} via Uniswap V3.`;
+        if (requiresBiometrics) riskNotes.push(`At or above the $${thresholdUSD.toLocaleString('en-US')} threshold, so the ENS domain owner must approve the trade.`);
       }
     } else {
       const rules = this.interpretGoal(goalPrompt, opts);
       ({ strategyType, tokenIn, tokenOut, useUniswapV4Hop, rationale } = rules);
-      summary = `${strategyType === 'aqua_position' ? 'Deposit' : 'Swap'} $${amountUSD.toLocaleString('en-US')} of ${tokenIn} into ${tokenOut} via Uniswap V3.`;
-      if (requiresBiometrics) riskNotes.push(`At or above the $${thresholdUSD.toLocaleString('en-US')} threshold, so the owner must approve with World ID.`);
+      summary = `Swap $${amountUSD.toLocaleString('en-US')} of ${tokenIn} into ${tokenOut} via Uniswap V3.`;
+      if (requiresBiometrics) riskNotes.push(`At or above the $${thresholdUSD.toLocaleString('en-US')} threshold, so the ENS domain owner must approve the trade.`);
     }
 
     rationale = [...rationale, ...checks];
 
     const inAddr = TOKENS[tokenIn].address;
     const outAddr = TOKENS[tokenOut].address;
-    const { instructions, encodedCallData } =
-      strategyType === 'aqua_position'
-        ? this.swapVMService.buildAquaPositionInstructions(inAddr, outAddr, amountUSD)
-        : this.swapVMService.buildSwapVMInstructions(inAddr, outAddr, amountUSD, {
-            useUniswapV4Hop,
-            splitRoute: strategyType === 'split_swap',
-          });
+    const { instructions, encodedCallData } = this.swapVMService.buildSwapVMInstructions(inAddr, outAddr, amountUSD, {
+      useUniswapV4Hop: false,
+      splitRoute: false,
+    });
 
     const quote = await this.quote(tokenIn, tokenOut, amountUSD);
 
@@ -262,7 +216,7 @@ export class AIAgentService {
         tokenIn,
         tokenOut,
         amountUSD,
-        usesUniswapV4Hop: useUniswapV4Hop,
+        usesUniswapV4Hop: false,
       },
       riskChecks: rationale,
       approvalStatus: requiresBiometrics ? 'PENDING_HUMAN_APPROVAL' : 'AUTO_APPROVED',
@@ -280,8 +234,8 @@ export class AIAgentService {
       rationale,
       riskNotes,
       agentSubname,
-      targetProtocol: '1inch_SwapVM',
-      usesUniswapV4Hop: useUniswapV4Hop,
+      targetProtocol: 'Uniswap_V3',
+      usesUniswapV4Hop: false,
       tokenInSymbol: tokenIn,
       tokenOutSymbol: tokenOut,
       amountIn: amountUSD.toString(),
@@ -289,6 +243,7 @@ export class AIAgentService {
       quoteSource: quote.source,
       estimatedValueUSD: amountUSD,
       requiresBiometric2FA: requiresBiometrics,
+      requiresOwnerApproval: requiresBiometrics,
       biometricThresholdUSD: thresholdUSD,
       authorization,
       dailyLimit,

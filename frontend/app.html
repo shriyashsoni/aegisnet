@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="description" content="AegisNet Console: Manage autonomous agent identities, configure approval thresholds, plan strategies via 0G Private Compute, and authorize executions via World ID.">
+<meta name="description" content="AegisNet Console: Manage autonomous agent identities, configure approval thresholds, plan strategies via 0G Private Compute, and authorize executions via ENS Owner Gate.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Console — AegisNet">
-<meta property="og:description" content="Manage autonomous agent identities, configure approval thresholds, plan strategies via 0G Private Compute, and authorize executions via World ID.">
+<meta property="og:description" content="Manage autonomous agent identities, configure approval thresholds, plan strategies via 0G Private Compute, and authorize executions via ENS Owner Gate.">
 <meta property="og:site_name" content="AegisNet">
 <title>Console — AegisNet</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cg transform='rotate(-30 12 12)'%3E%3Ccircle cx='7.3' cy='3.2' r='1.45'/%3E%3Crect x='5.5' y='4.7' width='3.6' height='14.6' rx='1.8'/%3E%3Crect x='14.9' y='4.7' width='3.6' height='14.6' rx='1.8'/%3E%3Ccircle cx='16.7' cy='20.8' r='1.45'/%3E%3C/g%3E%3C/svg%3E">
@@ -68,7 +68,7 @@
           Live on Ethereum Sepolia
         </span>
         <h1>Your AI agent's <em>control room</em>.</h1>
-        <p class="lede">Your agent trades on its own. Small trades go through automatically, big ones wait for you to authorize them with <strong>World ID Agent Pass</strong>, and you can stop it at any time. Every action here is backed by onchain verification on Sepolia.</p>
+        <p class="lede">Your agent trades on its own. Small trades go through automatically, big ones wait for you to authorize them with the <strong>ENS Owner Approval Gate</strong>, and you can stop it at any time. Every action here is backed by onchain verification on Sepolia.</p>
       </div>
 
       <div class="wallet-card" id="wallet-card">
@@ -93,7 +93,7 @@
       <div class="idea-card">
         <span class="idea-n">2 · The fix</span>
         <h3>A name, limits, and human approval</h3>
-        <p>AegisNet gives each agent an <strong>onchain identity</strong> with hard limits written onchain, <strong>0G Private Compute</strong> plans each trade with verifiable AI inference, and big trades require <strong>World ID Agent Pass</strong> clearance.</p>
+        <p>AegisNet gives each agent an <strong>onchain ENSv2 identity</strong> with hard limits written onchain, <strong>0G Private Compute</strong> plans each trade with verifiable AI inference, and big trades require <strong>ENS Owner Authorization</strong>.</p>
       </div>
       <div class="idea-arrow" aria-hidden="true">→</div>
       <div class="idea-card idea-card--result">
@@ -128,7 +128,7 @@
           <span class="sd-check"></span>
           <div class="sd-body">
             <strong>Give your agent an identity</strong>
-            <p id="step-identity-text">Register an ENS name for your agent with a daily limit and an approval threshold. Three wallet confirmations.</p>
+            <p id="step-identity-text">Register an ENS name for your agent with a daily limit and an approval threshold. Two wallet confirmations.</p>
           </div>
           <a class="btn btn-ghost btn-sm" href="#agents" data-goto-register>Register</a>
         </li>
@@ -144,7 +144,7 @@
           <span class="sd-check"></span>
           <div class="sd-body">
             <strong>A big trade waits for a human</strong>
-            <p id="step-big-text">The agent tries $2,500. It pauses onchain until you verify with World ID, then executes.</p>
+            <p id="step-big-text">The agent tries $2,500. It pauses onchain until you verify as the ENS owner, then executes.</p>
           </div>
           <button class="btn btn-solid btn-sm" type="button" data-scenario="big">Run $2,500 trade</button>
         </li>
@@ -253,7 +253,7 @@
           <ol class="phases">
             <li><span class="phase-n">I</span><div><strong>Plan (0G Compute)</strong><p>0G Private Compute evaluates market context and yields a verifiable trade proposal with cryptographic request ID.</p></div></li>
             <li><span class="phase-n">II</span><div><strong>Check (Onchain limits)</strong><p>AegisExecutionManager checks the agent's identity, daily allowance, target whitelist, and single-trade limit in AegisSubnameRegistry.</p></div></li>
-            <li><span class="phase-n">III</span><div><strong>Approve (World ID)</strong><p>Trades at or above the threshold require a World ID zero-knowledge proof, signed by the relayer. Small trades bypass this step.</p></div></li>
+            <li><span class="phase-n">III</span><div><strong>Approve (ENS Owner Gate)</strong><p>Trades at or above the threshold pause onchain until the registered ENS subname owner authorizes execution. Small trades execute immediately.</p></div></li>
             <li><span class="phase-n">IV</span><div><strong>Execute &amp; record</strong><p>The swap executes on Uniswap V3 (SwapRouter02) on Sepolia, and its permanent audit record is committed to 0G Decentralized Storage.</p></div></li>
           </ol>
         </div>
@@ -328,7 +328,7 @@
             <button class="btn btn-solid" type="submit">Update threshold</button>
             <button class="btn btn-ghost btn-danger" type="button" id="revoke-btn">Revoke agent</button>
           </div>
-          <p class="hint">A threshold of 0 turns the World ID gate off. Revoking removes all of the agent's authority immediately. Only the owner can do either.</p>
+          <p class="hint">A threshold of 0 requires owner approval on every trade. Revoking removes all of the agent's authority immediately. Only the owner can do either.</p>
           <div class="result" data-result hidden></div>
         </form>
       </div>
@@ -392,7 +392,7 @@
     <div class="tab-head tab-head--left">
       <h1>AI strategy <em>planner</em></h1>
       <p class="lede">Describe what you want. 0G Private Compute plans the strategy with verifiable AI inference, and deterministic code encodes the exact onchain route. Nothing is sent until you trade.</p>
-      <p class="explain"><strong>In simple words:</strong> type a goal like &quot;swap USDC to ETH at the best price&quot;. You get a plain-English plan and whether it will need your World ID approval.</p>
+      <p class="explain"><strong>In simple words:</strong> type a goal like &quot;swap USDC to ETH at the best price&quot;. You get a plain-English plan and whether it will need your owner approval.</p>
     </div>
 
     <div class="grid-side">
@@ -421,7 +421,7 @@
         <div class="panel-head"><h2>Plan</h2></div>
         <div class="empty-state">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h6"/></svg>
-          <p>Describe a goal to see the plan, the onchain route and whether World ID approval will be needed.</p>
+          <p>Describe a goal to see the plan, the onchain route and whether ENS owner approval will be needed.</p>
         </div>
       </div>
     </div>
@@ -432,7 +432,7 @@
     <div class="tab-head tab-head--left">
       <h1>Run a <em>trade</em></h1>
       <p class="lede">Your wallet acts as the agent and submits the trade to AegisExecutionManager on Sepolia.</p>
-      <p class="explain"><strong>In simple words:</strong> watch the checks light up. Under the threshold the trade goes straight through. Over it, it pauses onchain and World ID asks you to confirm you're a real human.</p>
+      <p class="explain"><strong>In simple words:</strong> watch the checks light up. Under the threshold the trade goes straight through. Over it, it pauses onchain until you authorize it as the ENS owner.</p>
     </div>
 
     <div class="grid-side">
@@ -495,32 +495,32 @@
   </section>
 </main>
 
-<!-- Human Approval Gate Modal -->
+<!-- ENS Owner Human Approval Gate Modal -->
 <div class="modal" id="worldid-modal" hidden>
   <div class="modal-scrim" data-close></div>
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="wid-title">
-    <div class="wid-orb" aria-hidden="true" style="background: radial-gradient(circle, rgba(147, 51, 234, 0.25) 0%, transparent 70%);">
-      <svg viewBox="0 0 48 48" fill="none" stroke="#a855f7" stroke-width="1.8">
+    <div class="wid-orb" aria-hidden="true" style="background: radial-gradient(circle, rgba(56, 189, 248, 0.22) 0%, transparent 70%);">
+      <svg viewBox="0 0 48 48" fill="none" stroke="#38bdf8" stroke-width="1.8">
         <circle cx="24" cy="24" r="20" stroke-dasharray="4 2"/>
-        <path d="M24 8v32M8 24h32M14 14l20 20M14 34L34 14"/>
+        <path d="M24 10v28M12 24h24M16 16l16 16M16 32l16-16"/>
         <circle cx="24" cy="24" r="8" fill="#18181b"/>
-        <path d="M21 24l2 2 4-4" stroke="#a855f7" stroke-width="2"/>
+        <path d="M21 24l2 2 4-4" stroke="#38bdf8" stroke-width="2"/>
       </svg>
     </div>
     <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:4px;">
-      <span class="status-pill s-ok" style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;border-color:#a855f7;color:#d8b4fe">World ID Agent Pass 2FA</span>
+      <span class="status-pill s-ok" style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;border-color:#38bdf8;color:#7dd3fc">ENSv2 Governance Gate</span>
     </div>
-    <h2 id="wid-title">World ID Agent Pass Human Approval Gate</h2>
+    <h2 id="wid-title">ENS Owner Human Approval Gate</h2>
     <p class="modal-prompt" id="wid-prompt"></p>
 
     <div id="wid-status-banner" hidden style="margin: 10px 0; padding: 10px 14px; border-radius: 8px; font-weight: 500; font-size: 13px; text-align: center;"></div>
     
     <div class="zk-circuit-box" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 14px;margin:12px 0;font-size:12px;text-align:left;">
       <div style="display:flex;justify-content:space-between;color:#a1a1aa;margin-bottom:4px;">
-        <span>Security Check:</span><code style="color:#c084fc">World ID Agent Pass Checkpoint</code>
+        <span>Security Check:</span><code style="color:#7dd3fc">ENS Subname Owner Verification</code>
       </div>
       <div style="display:flex;justify-content:space-between;color:#a1a1aa;margin-bottom:4px;">
-        <span>Verification Mode:</span><span id="wid-mode-badge" style="color:#4ade80">● World ID Agent Pass</span>
+        <span>Verification Mode:</span><span id="wid-mode-badge" style="color:#4ade80">● ENS Subname Owner Authorization</span>
       </div>
       <div style="display:flex;justify-content:space-between;color:#a1a1aa;margin-bottom:4px;">
         <span>Window Expiry:</span><span id="wid-expiry-badge" style="color:#fbbf24">15m countdown</span>
@@ -534,7 +534,7 @@
     <ol class="tx-steps" id="wid-steps" hidden></ol>
     <p class="hint" id="wid-hint"></p>
     <div class="modal-actions" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
-      <button class="btn btn-solid" type="button" id="wid-verify" style="background:#7e22ce;border-color:#a855f7;">Verify Human with Agent Pass</button>
+      <button class="btn btn-solid" type="button" id="wid-verify" style="background:#0284c7;border-color:#38bdf8;">Authorize Trade as Owner</button>
       <button class="btn btn-ghost" type="button" id="wid-deny" style="border-color:#ef4444;color:#ef4444;">Deny Trade</button>
       <button class="btn btn-ghost" type="button" id="wid-cancel">Cancel on-chain</button>
     </div>

@@ -169,7 +169,7 @@ p { margin-bottom: 16px; color: #cccccc; }
     <h4>Contents</h4>
     <a href="#abstract">1. Abstract &amp; Problem</a>
     <a href="#identity">2. Agent Identity &amp; EAC</a>
-    <a href="#approval-gate">3. World ID Agent Pass</a>
+    <a href="#approval-gate">3. ENS Owner Approval Gate</a>
     <a href="#zg">4. 0G Compute &amp; Storage</a>
     <a href="#uniswap">5. Uniswap V3 Execution</a>
     <a href="#math">6. Cryptographic Formalisms</a>
@@ -189,7 +189,7 @@ p { margin-bottom: 16px; color: #cccccc; }
 
       <h1>Operational AI Infrastructure &amp; <em>Autonomous DeFi Safeguards</em></h1>
       <p style="font-size:17px; color:#e0e0e0; margin-top:12px;">
-        A technical architecture unifying autonomous AI agent execution with 0G Private Compute planning, Cryptographic Human Approval Gate (World ID Agent Pass), Uniswap V3 on-chain execution, and 0G Storage immutable audit trails.
+        A technical architecture unifying autonomous AI agent execution with 0G Private Compute planning, Cryptographic Human Approval Gate (ENS Subname Owner Authorization), Uniswap V3 on-chain execution, and 0G Storage immutable audit trails.
       </p>
     </div>
 
@@ -208,7 +208,7 @@ p { margin-bottom: 16px; color: #cccccc; }
         </ol>
       </div>
       <p>
-        <strong>AegisNet</strong> solves this trilemma by introducing a zero-friction, multi-layer security architecture. Agents are assigned granular, revocable identities in <code>AegisSubnameRegistry.sol</code>, restricted by contract-level Enhanced Access Control (EAC), shielded by the <strong>World ID Agent Pass</strong> whenever transaction values meet or exceed configurable thresholds (e.g. $1,000 USD), executed on Uniswap V3, and preserved via Merkle audit records on 0G Storage.
+        <strong>AegisNet</strong> solves this trilemma by introducing a zero-friction, multi-layer security architecture. Agents are assigned granular, revocable identities in <code>AegisSubnameRegistry.sol</code>, restricted by contract-level Enhanced Access Control (EAC), shielded by the <strong>ENS Owner Human Approval Gate</strong> whenever transaction values meet or exceed configurable thresholds (e.g. $1,000 USD), executed on Uniswap V3, and preserved via Merkle audit records on 0G Storage.
       </p>
     </section>
 
@@ -242,23 +242,23 @@ struct AgentPermissions {
 
     <!-- Section 3 -->
     <section id="approval-gate">
-      <h2>3. World ID Agent Pass &amp; Relayer Attestation</h2>
+      <h2>3. ENS Owner Approval Gate &amp; Relayer Attestation</h2>
       <p>
         When an agent requests execution via <code>AegisExecutionManager.sol</code>, the contract evaluates the transaction value against the agent's threshold. If <code>valueUSD &gt;= approvalThresholdUSD</code>, the transaction is intercepted and held in a pending state.
       </p>
       <p>
-        To verify genuine human intent and prevent unauthorized drains without exposing credentials, AegisNet leverages a Human Approval Gate with ECDSA relayer attestation, integrated with World ID proof-of-humanity:
+        To verify genuine human intent and prevent unauthorized drains without exposing credentials, AegisNet leverages a Human Approval Gate with ECDSA relayer attestation, integrated with ENS subname owner authorization:
       </p>
       <div class="callout callout-info">
         <div class="callout-title">🛡️ Human Approval Gate Interception &amp; Settlement Flow</div>
         <p>
           1. Agent submits proposed transaction payload to <code>requestExecution()</code>.<br>
           2. Contract emits <code>ExecutionRequested(requestId, requiresApproval = true)</code>.<br>
-          3. Operator initiates authorization via World ID Agent Pass verification session.<br>
-          4. Zero-knowledge proof binds to human identity and request parameters.<br>
-          5. Gateway relayer validates proof via World ID Developer API, checking 1-to-1 owner binding.<br>
-          6. Per-request single-use nullifier \( N = \text{keccak256}(N_{\text{world}} \mathbin{\Vert} \text{requestId}) \) is committed.<br>
-          7. Relayer signs attestation digest \( \sigma = \text{Sign}(H(\text{requestId}, N, \text{manager}, \text{chainId})) \).<br>
+          3. Registered ENS domain owner initiates authorization via the Human Approval Gate session.<br>
+          4. Authorization verifies domain ownership and request parameters onchain.<br>
+          5. Gateway relayer validates owner authorization against <code>AegisSubnameRegistry</code>.<br>
+          6. Per-request single-use nullifier \( N = \text{keccak256}(N_{\text{owner}} \mathbin{\Vert} \text{requestId}) \) is committed.<br>
+          7. Relayer signs attestation digest \( \sigma = \text{Sign}(H(\text{requestId}, N, \text{deadline}, \text{manager}, \text{chainId})) \).<br>
           8. Contract verifies signature via <code>approveWithRelayer()</code> and unlocks atomic settlement on Uniswap V3.
         </p>
       </div>

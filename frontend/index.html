@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<meta name="description" content="AegisNet: Guardrailed AI agent execution on Ethereum Sepolia. 0G Compute plans trades, on-chain contracts enforce limits, World ID Agent Pass approves high-value trades, Uniswap V3 executes swaps, and 0G Storage preserves audit trails.">
+<meta name="description" content="AegisNet: Guardrailed AI agent execution on Ethereum Sepolia. 0G Compute plans trades, ENSv2 contracts enforce spending limits, ENS Subname Owner Approval Gate authorizes high-value trades, Uniswap V3 executes swaps, and 0G Storage preserves audit trails.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="AegisNet — Guardrailed AI Agent Execution">
-<meta property="og:description" content="Cryptographic guardrails for autonomous DeFi agents: 0G Compute planning, on-chain limit enforcement, World ID Agent Pass human approval, and Uniswap V3 execution.">
+<meta property="og:description" content="Cryptographic guardrails for autonomous DeFi agents: 0G Compute planning, ENSv2 on-chain limit enforcement, ENS Subname Owner Approval Gate, and Uniswap V3 execution.">
 <meta property="og:site_name" content="AegisNet">
 <meta property="og:image" content="og-image.svg">
 <meta name="twitter:card" content="summary_large_image">
@@ -902,7 +902,7 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
           <div class="built-wordmarks">
             <span class="wordmark-pill">ENSv2 Identity</span>
             <span class="wordmark-dot">·</span>
-            <span class="wordmark-pill">World ID Agent Pass</span>
+            <span class="wordmark-pill">ENS Approval Gate</span>
             <span class="wordmark-dot">·</span>
             <span class="wordmark-pill">Uniswap V3</span>
             <span class="wordmark-dot">·</span>
@@ -965,7 +965,7 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
             <div class="flow-outcome" id="flow-outcome-text">
               <div class="flow-outcome-row outcome-pending">
                 <span class="pulse-amber">●</span>
-                <span>Held onchain · Awaiting World ID Agent Pass</span>
+                <span>Held onchain · Awaiting ENS Owner Approval</span>
               </div>
               <div class="flow-outcome-row outcome-approved" hidden>
                 <span class="check-green">✓</span>
@@ -1091,7 +1091,7 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
           <span class="step-n" aria-label="Step 3: Approve">
             <svg class="step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a8.5 8.5 0 0 1 13 0"/><circle cx="18" cy="18" r="3"/><path d="m17 18 1 1 2-2"/></svg>
           </span>
-          <div><h3>Approve (World ID, only above the threshold)</h3><p>Trades at or above the threshold hold onchain until human authorization arrives via World ID Agent Pass.</p></div>
+          <div><h3>Approve (ENS Owner Gate, only above the threshold)</h3><p>Trades at or above the threshold hold onchain until authorization arrives from the registered ENS subname owner.</p></div>
         </li>
         <li class="reveal">
           <span class="step-n" aria-label="Step 4: Execute and record">
@@ -1112,8 +1112,8 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
 <span class="t-key">AegisExecutionManager</span>.<span class="t-str">requestExecution</span>(adapter, data, 2500e18)
 <span class="t-dim">←</span> ExecutionRequested  requiresApproval <span class="t-warn">true</span>
 
-<span class="t-dim"># 3. World ID Agent Pass approval</span>
-<span class="t-key">POST</span> /api/worldid/verify  { sessionId, proof }
+<span class="t-dim"># 3. ENS Owner Approval Gate</span>
+<span class="t-key">POST</span> /api/approval/verify  { sessionId }
 <span class="t-dim">←</span> relayer signature <span class="t-ok">✓</span> (nullifier: <span class="t-str">0x3d15…</span>)
 
 <span class="t-dim"># 4. Uniswap V3 swap &amp; 0G storage record</span>
@@ -1149,9 +1149,9 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
 
       <article class="card reveal" style="--rd:0.16s">
         <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c-3 3-3 14 0 17M12 3.5c3 3 3 14 0 17"/></svg></div>
-        <h3>World ID Agent Pass</h3>
-        <p>Anything at or above the agent's threshold pauses until human approval arrives via relayer attestation. Each approval works only once with single-use nullifiers, so it cannot be replayed.</p>
-        <span class="card-tag">≥ <span data-live="threshold">$1,000</span> → Agent Pass</span>
+        <h3>ENS Owner Approval Gate</h3>
+        <p>Anything at or above the agent's threshold pauses until human authorization arrives from the registered ENS subname owner. Each approval works only once with single-use replay protection.</p>
+        <span class="card-tag">≥ <span data-live="threshold">$1,000</span> → Owner Gate</span>
       </article>
 
       <article class="card reveal">
@@ -1177,7 +1177,7 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
     </div>
 
     <div class="partners reveal">
-      <div class="partner"><strong>World ID</strong><span>Agent Pass human approval</span></div>
+      <div class="partner"><strong>ENSv2</strong><span>Hierarchical Identity &amp; EAC</span></div>
       <div class="partner"><strong>Uniswap</strong><span>V3 SwapRouter02 execution</span></div>
       <div class="partner"><strong>0G Compute</strong><span>TEE-attested trade planning</span></div>
       <div class="partner"><strong>0G Storage</strong><span>Decentralized audit records</span></div>
@@ -1219,7 +1219,7 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
         <p class="uc-summary">Large opportunistic position exceeding the configured approval threshold.</p>
         <div class="uc-outcome">
           <span class="uc-outcome-label">Outcome</span>
-          <span class="uc-outcome-text">High-value trade pauses onchain until approved by the owner via World ID Agent Pass.</span>
+          <span class="uc-outcome-text">High-value trade pauses onchain until approved by the owner via the ENS Owner Approval Gate.</span>
         </div>
       </article>
 
@@ -1307,8 +1307,8 @@ npm start   # → http://localhost:4000</code></li>
         <p style="margin-top:6px">Writes are signed by the user's wallet directly on the contracts. The API plans, verifies and indexes.</p>
         <ul class="endpoints" style="margin-top:18px">
           <li><span class="verb">POST</span><div><code>/api/agent/propose</code><small>0G Compute plans strategy &amp; returns encoded Uniswap V3 calldata</small></div></li>
-          <li><span class="verb">POST</span><div><code>/api/worldid/session</code><small>Create World ID Agent Pass verification session</small></div></li>
-          <li><span class="verb">POST</span><div><code>/api/worldid/verify</code><small>Validate human proof &amp; return relayer attestation</small></div></li>
+          <li><span class="verb">POST</span><div><code>/api/approval/session</code><small>Create ENS Owner verification session</small></div></li>
+          <li><span class="verb">POST</span><div><code>/api/approval/verify</code><small>Validate owner authorization &amp; return relayer attestation</small></div></li>
           <li><span class="verb get">GET</span><div><code>/api/execution/requests</code><small>Every trade request, indexed from chain events</small></div></li>
           <li><span class="verb get">GET</span><div><code>/api/uniswap/info</code><small>Uniswap V3 router, adapter, and Sepolia deployment details</small></div></li>
           <li><span class="verb get">GET</span><div><code>/api/zg/proof</code><small>Latest 0G Compute request ID and 0G Storage Merkle root</small></div></li>
@@ -1333,7 +1333,7 @@ npm start   # → http://localhost:4000</code></li>
         <svg class="faq-limitations-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <strong>Hackathon Scope &amp; Limitations</strong>
       </div>
-      <p>AegisNet is currently deployed for testing on <strong>Ethereum Sepolia</strong> (execution manager &amp; Uniswap V3 swaps) and the <strong>0G Galileo testnet</strong> (storage &amp; private compute). World ID Agent Pass zero-knowledge proofs use World's official staging simulator for the hackathon without physical Orb hardware. Approval thresholds and USD exchange rates are configurable via environment variables for live demonstration.</p>
+      <p>AegisNet is currently deployed for testing on <strong>Ethereum Sepolia</strong> (execution manager &amp; Uniswap V3 swaps) and the <strong>0G Galileo testnet</strong> (storage &amp; private compute). Approval thresholds and USD exchange rates are configurable via environment variables for live demonstration.</p>
     </div>
 
     <div class="faq" role="presentation">
@@ -1346,7 +1346,7 @@ npm start   # → http://localhost:4000</code></li>
           </button>
         </h3>
         <div class="faq-panel" id="faq-ans-1" role="region" aria-labelledby="faq-trig-1" hidden>
-          Three onchain checks in <code>AegisExecutionManager</code> and <code>AegisSubnameRegistry</code>. First, the agent must be registered and active with its contract targets whitelisted. Second, the agent cannot exceed its daily spending limit (tracked and reset daily onchain). Third, any trade at or above the approval threshold pauses onchain until a verified human provides a World ID attestation with a single-use nullifier.
+          Three onchain checks in <code>AegisExecutionManager</code> and <code>AegisSubnameRegistry</code>. First, the agent must be registered and active with its contract targets whitelisted. Second, the agent cannot exceed its daily spending limit (tracked and reset daily onchain). Third, any trade at or above the approval threshold pauses onchain until the registered ENS subname owner provides authorization with a single-use nullifier.
         </div>
       </div>
 
@@ -1359,7 +1359,7 @@ npm start   # → http://localhost:4000</code></li>
           </button>
         </h3>
         <div class="faq-panel" id="faq-ans-2" role="region" aria-labelledby="faq-trig-2" hidden>
-          If the operator explicitly denies a trade, or if the 15-minute deadline expires without attestation, the pending request is cancelled onchain via <code>cancelRequest</code> (callable by owner, agent, or anyone after deadline). Once cancelled, zero funds move, the transaction cannot be revived, and the single-use request state is sealed.
+          If the operator explicitly denies a trade, or if the 15-minute deadline expires without attestation, the pending request is cancelled onchain via <code>cancelExecution</code> (callable by owner, agent, or anyone after deadline). Once cancelled, zero funds move, the transaction cannot be revived, and the single-use request state is sealed.
         </div>
       </div>
 
@@ -1372,7 +1372,7 @@ npm start   # → http://localhost:4000</code></li>
           </button>
         </h3>
         <div class="faq-panel" id="faq-ans-3" role="region" aria-labelledby="faq-trig-3" hidden>
-          You do. Agent registration, permission updates, trade submissions, and cancellations are signed directly by your wallet (or your agent's private key) via EIP-1193 or browser providers. The relayer only signs off-chain verification attestations after World ID proofs pass; it never holds custody of assets or signs wallet transfers.
+          You do. Agent registration, permission updates, trade submissions, and cancellations are signed directly by your wallet (or your agent's private key) via EIP-1193 or browser providers. The relayer only signs off-chain verification attestations after owner approval passes; it never holds custody of assets or signs wallet transfers.
         </div>
       </div>
 
@@ -1411,7 +1411,7 @@ npm start   # → http://localhost:4000</code></li>
           </button>
         </h3>
         <div class="faq-panel" id="faq-ans-6" role="region" aria-labelledby="faq-trig-6" hidden>
-          Flash loan arbitrage execution and multi-hop DEX aggregator routing outside Uniswap V3 are out of scope. Mainnet token balances and production World ID orb hardware verifications are mocked using World's official staging simulator for the hackathon.
+          Flash loan arbitrage execution and multi-hop DEX aggregator routing outside Uniswap V3 are out of scope. Mainnet token balances are simulated using realistic market rate quotes for the Sepolia testnet environment.
         </div>
       </div>
     </div>
@@ -1708,15 +1708,15 @@ npm start   # → http://localhost:4000</code></li>
       fallbackLabel: 'Approval requested',
       badgeClass: 'badge-warn',
       defaultStatus: 'PENDING',
-      fallbackSummary: 'High-value trade intercepted and held onchain on Sepolia awaiting World ID Agent Pass human approval.'
+      fallbackSummary: 'High-value trade intercepted and held onchain on Sepolia awaiting ENS domain owner approval.'
     },
     {
       key: 'worldApproved',
       step: 'PHASE III',
-      fallbackLabel: 'Human approved',
+      fallbackLabel: 'Owner approved',
       badgeClass: 'badge-info',
       defaultStatus: 'APPROVED',
-      fallbackSummary: 'World ID human proof validated server-side; relayer attestation signed with single-use request nullifier.'
+      fallbackSummary: 'ENS subname owner authorization verified; relayer attestation signed with single-use request nullifier.'
     },
     {
       key: 'swapExecuted',

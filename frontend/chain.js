@@ -110,14 +110,7 @@
     var r2 = await send('Allow the Uniswap V3 adapter', function () {
       return registry.setTargetContractWhitelist(node, cfg.contracts.AegisUniswapAdapter, true);
     }, onStatus);
-    var txHashes = [r1.hash, r2.hash];
-    if (cfg.contracts.AegisSwapVMAdapter) {
-      var r3 = await send('Allow the 1inch SwapVM adapter', function () {
-        return registry.setTargetContractWhitelist(node, cfg.contracts.AegisSwapVMAdapter, true);
-      }, onStatus);
-      txHashes.push(r3.hash);
-    }
-    return { node: node, txHashes: txHashes };
+    return { node: node, txHashes: [r1.hash, r2.hash] };
   }
 
   async function setWhitelist(node, target, allowed, onStatus) {

@@ -47,10 +47,9 @@ export class ENSService {
       .find((parsed) => parsed?.name === 'SubnameRegistered');
     const subnameNode: string = event ? event.args.subnameNode : await this.registryContract.agentToNode(agentAddress);
 
-    // Automatically whitelist default DeFi targets (Uniswap V3 Adapter & SwapVM Adapter)
+    // Automatically whitelist default DeFi execution target (AegisUniswapAdapter)
     const whitelistTxHashes = [
       await this.setTargetContractWhitelist(subnameNode, config.contracts.AegisUniswapAdapter, true),
-      await this.setTargetContractWhitelist(subnameNode, config.contracts.AegisSwapVMAdapter, true),
     ];
 
     return {
