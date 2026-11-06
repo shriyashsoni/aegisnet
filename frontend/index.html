@@ -243,15 +243,30 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 0 24px rgba(170, 200, 255, 0.28);
 }
 
-/* ---------- Hero ---------- */
-.hero { display: flex; align-items: flex-end; justify-content: center; padding: 8px 24px var(--hero-gap); min-height: 0; }
+/* ---------- Hero Redesign (1440x900 Viewport Optimized) ---------- */
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px var(--header-x) 24px;
+  min-height: calc(100vh - var(--header-space) - 75px);
+}
+.hero-container {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 48px;
+  align-items: center;
+  max-width: var(--wrap);
+  width: 100%;
+}
 .hero-copy {
-  position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center;
-  text-align: center; max-width: var(--copy-max); width: 100%;
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: flex-start;
+  text-align: left; max-width: 580px; width: 100%;
 }
 
 .badge {
-  display: inline-flex; align-items: center; gap: 8px; margin-bottom: 22px; padding: 9px 15px; border: 0; border-radius: 5px;
+  display: inline-flex; align-items: center; gap: 8px; margin-bottom: 18px; padding: 8px 14px; border: 0; border-radius: 5px;
   background: linear-gradient(90deg, #7d7d7d 0%, #2a2a2a 52%, #0a0a0a 100%);
   color: #f2f2f2; font-size: var(--badge); font-weight: 400; letter-spacing: -0.01em;
 }
@@ -261,19 +276,177 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
 }
 
 .hero h1 {
-  display: flex; flex-direction: column; align-items: center;
-  font-size: var(--h1); font-weight: 500; letter-spacing: -0.045em; line-height: 1.12; color: #fff;
+  display: flex; flex-direction: column; align-items: flex-start;
+  font-size: clamp(34px, 3.8vw, 48px); font-weight: 500; letter-spacing: -0.045em; line-height: 1.12; color: #fff;
+  text-align: left;
 }
-.headline-line { display: block; overflow: hidden; padding: 0.06em 0.15em 0.14em; }
+.headline-line { display: block; overflow: hidden; padding: 0.05em 0.15em 0.12em; }
 .headline-inner { display: block; }
 .hero h1 em, .section h2 em, .cta h2 em {
   font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 1.08em; letter-spacing: -0.03em; color: #9a9a9a;
 }
 .hero h1 em { animation: in-em 1.2s var(--ease) 0.72s both; }
 
-.lede { max-width: var(--lede-max); margin-top: 18px; color: #9a9a9a; font-size: var(--lede); font-weight: 400; line-height: 1.55; letter-spacing: -0.015em; }
+.hero .lede {
+  max-width: 490px; margin-top: 14px; color: #9a9a9a; font-size: 15px; font-weight: 400; line-height: 1.5; letter-spacing: -0.015em;
+  text-align: left;
+}
 
-.hero-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; margin-top: 26px; }
+.hero-actions {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 12px; margin-top: 22px;
+}
+
+/* Built With Row */
+.hero-built-row {
+  display: inline-flex; align-items: center; gap: 12px; margin-top: 24px; padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 12.5px; color: #888;
+}
+.built-label { text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; font-weight: 600; color: #777; }
+.built-wordmarks { display: inline-flex; align-items: center; gap: 10px; }
+.wordmark-pill {
+  padding: 4px 10px; border-radius: 5px; font-weight: 500; color: #e4e4e4;
+  background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.1);
+  letter-spacing: -0.01em; font-size: 12px; transition: border-color 0.25s ease, background 0.25s ease;
+}
+.wordmark-pill:hover { border-color: rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.08); }
+.wordmark-dot { color: #444; font-size: 11px; }
+
+/* Approval Flow Visual Card */
+.hero-visual { width: 100%; display: flex; justify-content: center; }
+.flow-card {
+  width: 100%; max-width: 460px; border-radius: 14px; padding: 22px;
+  background: linear-gradient(165deg, rgba(20, 20, 24, 0.85) 0%, rgba(10, 10, 14, 0.95) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+}
+.flow-card-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.flow-card-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 500; color: #aaa; }
+.live-beacon { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px var(--ok); animation: pulse-beacon 2s infinite ease-in-out; }
+@keyframes pulse-beacon { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.85); } }
+.flow-chip { font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.06); color: #888; border: 1px solid rgba(255, 255, 255, 0.08); }
+
+.flow-trade-box {
+  border-radius: 10px; padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.025); border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+.flow-trade-box:hover { border-color: rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.04); }
+.flow-trade-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.flow-trade-info { display: flex; flex-direction: column; gap: 2px; }
+.trade-title { font-size: 15px; font-weight: 600; color: #fff; letter-spacing: -0.02em; }
+.trade-route { font-family: var(--mono); font-size: 11.5px; color: #777; }
+.trade-badge { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+.badge-auto { background: rgba(126, 226, 168, 0.12); color: var(--ok); border: 1px solid rgba(126, 226, 168, 0.3); }
+.badge-gate { background: rgba(242, 196, 107, 0.12); color: var(--warn); border: 1px solid rgba(242, 196, 107, 0.3); }
+
+.flow-trade-bottom { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+.trade-metric { font-family: var(--mono); font-size: 11px; color: #888; }
+.trade-verdict { font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 5px; }
+.text-ok { color: var(--ok); }
+.check-symbol { font-weight: 700; font-size: 13px; }
+
+.flow-divider {
+  display: flex; align-items: center; gap: 12px; margin: 12px 0;
+}
+.flow-divider-line { flex: 1; height: 1px; background: rgba(255, 255, 255, 0.07); }
+.flow-divider-text { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: #666; font-weight: 600; }
+
+.flow-interactive-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.state-selector { display: inline-flex; align-items: center; gap: 3px; background: rgba(0, 0, 0, 0.45); padding: 3px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.08); }
+.state-pill {
+  padding: 3px 9px; border-radius: 4px; font-size: 11px; font-weight: 500; color: #777; background: transparent; border: 0; cursor: pointer; transition: all 0.2s ease;
+}
+.state-pill:hover { color: #fff; }
+.state-pill.is-active[data-flow-state="pending"] { background: rgba(242, 196, 107, 0.2); color: var(--warn); box-shadow: 0 0 8px rgba(242, 196, 107, 0.2); }
+.state-pill.is-active[data-flow-state="approved"] { background: rgba(126, 226, 168, 0.2); color: var(--ok); box-shadow: 0 0 8px rgba(126, 226, 168, 0.2); }
+.state-pill.is-active[data-flow-state="denied"] { background: rgba(255, 122, 122, 0.2); color: #ff7a7a; box-shadow: 0 0 8px rgba(255, 122, 122, 0.2); }
+
+.flow-outcome { margin-top: 12px; padding: 10px 12px; border-radius: 6px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.06); font-size: 11.5px; color: #aaa; }
+.flow-outcome-row { display: flex; align-items: center; gap: 8px; }
+.pulse-amber { color: var(--warn); animation: pulse-beacon 1.5s infinite; font-size: 13px; }
+.check-green { color: var(--ok); font-weight: 700; font-size: 13px; }
+.cross-red { color: #ff7a7a; font-weight: 700; font-size: 13px; }
+
+/* Stats Bar */
+.hash-copy-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 5px;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff; font-family: var(--mono); font-size: 12px; cursor: pointer; transition: all 0.2s ease;
+}
+.hash-copy-btn:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.25); }
+.copy-badge { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* Live Proof Section */
+.proof-timeline {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-top: 36px;
+}
+.proof-card {
+  display: flex; flex-direction: column; justify-content: space-between; padding: 20px; border-radius: 12px;
+}
+.proof-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.badge-status { font-family: var(--mono); font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.05em; }
+.badge-ok { background: rgba(126, 226, 168, 0.12); color: var(--ok); border: 1px solid rgba(126, 226, 168, 0.3); }
+.badge-warn { background: rgba(242, 196, 107, 0.12); color: var(--warn); border: 1px solid rgba(242, 196, 107, 0.3); }
+.badge-info { background: rgba(169, 196, 255, 0.12); color: var(--info); border: 1px solid rgba(169, 196, 255, 0.3); }
+.badge-bad { background: rgba(255, 122, 122, 0.12); color: #ff7a7a; border: 1px solid rgba(255, 122, 122, 0.3); }
+.proof-step { font-family: var(--mono); font-size: 11px; color: #555; }
+.proof-title { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+.proof-desc { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin-bottom: 16px; flex: 1; }
+
+.proof-tx-box {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.proof-tx-link { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11.5px; color: #a9c4ff; }
+.proof-tx-link:hover { color: #fff; text-decoration: underline; }
+.ext-icon { width: 12px; height: 12px; }
+.btn-copy-chip {
+  padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 500;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #aaa; cursor: pointer; transition: all 0.2s ease;
+}
+.btn-copy-chip:hover { background: rgba(255, 255, 255, 0.12); color: #fff; border-color: rgba(255, 255, 255, 0.25); }
+.btn-copy-chip.is-copied, .hash-copy-btn.is-copied {
+  color: var(--ok);
+  border-color: rgba(126, 226, 168, 0.4);
+  background: rgba(126, 226, 168, 0.1);
+}
+
+/* 0G Proof Panel */
+.zg-proof-panel {
+  margin-top: 24px; border-radius: 12px; padding: 22px 24px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015));
+  border: 1px solid var(--border-soft);
+}
+.zg-proof-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+.zg-proof-tag { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: #cfcfcf; }
+.zg-badge { font-weight: 700; font-size: 11.5px; padding: 2px 8px; border-radius: 4px; background: rgba(126, 226, 168, 0.15); color: var(--ok); border: 1px solid rgba(126, 226, 168, 0.3); }
+.zg-proof-links { display: inline-flex; align-items: center; gap: 8px; }
+.zg-proof-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.zg-proof-box { padding: 14px 16px; border-radius: 8px; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.06); }
+.zg-label { display: block; font-size: 11.5px; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+.zg-val-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.zg-val { font-family: var(--mono); font-size: 12.5px; color: #e4e4e4; word-break: break-all; }
+
+/* Empty state */
+.proof-empty-state { text-align: center; padding: 48px 24px; margin-top: 24px; }
+.empty-icon { font-size: 32px; margin-bottom: 12px; }
+
+@media (max-width: 959px) {
+  .hero { padding: 16px var(--header-x) 32px; min-height: auto; }
+  .hero-container { grid-template-columns: 1fr; gap: 36px; }
+  .hero-copy { align-items: center; text-align: center; margin: 0 auto; }
+  .hero h1 { align-items: center; text-align: center; }
+  .hero .lede { text-align: center; }
+  .hero-actions { justify-content: center; }
+  .hero-built-row { justify-content: center; }
+  .hero-visual { max-width: 480px; margin: 0 auto; }
+  .stats { flex-direction: column; align-items: flex-start; gap: 14px; padding: 24px var(--header-x); }
+  .proof-timeline { grid-template-columns: 1fr; }
+}
 
 /* ---------- Stats ---------- */
 .stats {
@@ -625,10 +798,11 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
   </a>
 
   <nav id="site-nav" aria-label="Primary">
-    <a class="appear appear--scale" href="#benefits" style="--d:0.16s">Benefits</a>
-    <a class="appear appear--soft" href="#how-it-works" style="--d:0.28s">How It Works</a>
+    <a class="appear appear--scale" href="#live-proof" style="--d:0.16s">Live Proof</a>
+    <a class="appear appear--scale" href="#how-it-works" style="--d:0.24s">How It Works</a>
+    <a class="appear appear--soft" href="#benefits" style="--d:0.32s">Benefits</a>
     <a class="appear appear--scale" href="#use-cases" style="--d:0.40s">Use Cases</a>
-    <a class="appear appear--soft" href="#faqs" style="--d:0.52s">FAQs</a>
+    <a class="appear appear--soft" href="#faqs" style="--d:0.48s">FAQs</a>
   </nav>
 
   <div class="header-right">
@@ -643,72 +817,243 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
 
 <div class="page">
   <main class="hero" id="top">
-    <div class="hero-copy">
-      <span class="badge appear appear--pop" style="--d:0.22s">
-        <svg class="badge-star" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
-          <path d="M12 2.6C12.55 2.6 12.88 3.15 13.08 4.7c.62 4.7 1.52 5.6 6.22 6.22 1.55.2 2.1.53 2.1 1.08s-.55.88-2.1 1.08c-4.7.62-5.6 1.52-6.22 6.22-.2 1.55-.53 2.1-1.08 2.1s-.88-.55-1.08-2.1c-.62-4.7-1.52-5.6-6.22-6.22C3.15 12.88 2.6 12.55 2.6 12s.55-.88 2.1-1.08c4.7-.62 5.6-1.52 6.22-6.22C11.12 3.15 11.45 2.6 12 2.6Z"/>
-        </svg>
-        Guardrailed AI Agent Execution
-      </span>
+    <div class="hero-container">
+      <div class="hero-copy">
+        <span class="badge appear appear--pop" style="--d:0.22s">
+          <svg class="badge-star" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
+            <path d="M12 2.6C12.55 2.6 12.88 3.15 13.08 4.7c.62 4.7 1.52 5.6 6.22 6.22 1.55.2 2.1.53 2.1 1.08s-.55.88-2.1 1.08c-4.7.62-5.6 1.52-6.22 6.22-.2 1.55-.53 2.1-1.08 2.1s-.88-.55-1.08-2.1c-.62-4.7-1.52-5.6-6.22-6.22C3.15 12.88 2.6 12.55 2.6 12s.55-.88 2.1-1.08c4.7-.62 5.6-1.52 6.22-6.22C11.12 3.15 11.45 2.6 12 2.6Z"/>
+          </svg>
+          Guardrailed AI Agent Execution
+        </span>
 
-      <h1>
-        <span class="headline-line"><span class="headline-inner appear appear--mask" style="--d:0.42s">Let <em>AI agents</em> trade onchain,</span></span>
-        <span class="headline-line"><span class="headline-inner appear appear--mask" style="--d:0.62s">with a human on the big calls.</span></span>
-      </h1>
+        <h1>
+          <span class="headline-line"><span class="headline-inner appear appear--mask" style="--d:0.42s">AI agents trade onchain.</span></span>
+          <span class="headline-line"><span class="headline-inner appear appear--mask" style="--d:0.62s"><em>You</em> approve the big calls.</span></span>
+        </h1>
 
-      <p class="lede appear appear--soft" style="--d:0.82s;animation-duration:1.25s">AegisNet guardrails autonomous AI agents: 0G Compute plans trades, on-chain contracts enforce spending limits, high-value orders require World ID Agent Pass approval, and Uniswap V3 executes swaps on Sepolia with 0G Storage audit records.</p>
+        <p class="lede appear appear--soft" style="--d:0.82s;animation-duration:1.25s">Small trades run automatically within daily spending limits. Moves at or above $1,000 hold onchain until you approve.</p>
 
-      <div class="hero-actions">
-        <button class="btn btn-solid appear appear--btn" type="button" data-wallet style="--d:0.96s">Connect wallet</button>
-        <a class="btn btn-ghost appear appear--side" href="#how-it-works" style="--d:1.10s">See how it works</a>
+        <div class="hero-actions">
+          <a class="btn btn-solid appear appear--btn" href="app.html" style="--d:0.96s">Launch console</a>
+          <a class="btn btn-ghost appear appear--side" href="#how-it-works" style="--d:1.06s">See how it works</a>
+        </div>
+
+        <div class="hero-built-row appear appear--soft" style="--d:1.16s">
+          <span class="built-label">Built with</span>
+          <div class="built-wordmarks">
+            <span class="wordmark-pill">World ID Agent Pass</span>
+            <span class="wordmark-dot">·</span>
+            <span class="wordmark-pill">Uniswap V3</span>
+            <span class="wordmark-dot">·</span>
+            <span class="wordmark-pill">0G</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right column: approval flow illustration card -->
+      <div class="hero-visual appear appear--side" style="--d:0.88s">
+        <div class="flow-card">
+          <div class="flow-card-header">
+            <div class="flow-card-tag">
+              <span class="live-beacon"></span>
+              <span>Illustration of onchain guardrail flow</span>
+            </div>
+            <span class="flow-chip">Sepolia</span>
+          </div>
+
+          <!-- Trade 1: Auto-executed -->
+          <div class="flow-trade-box flow-trade--auto">
+            <div class="flow-trade-top">
+              <div class="flow-trade-info">
+                <span class="trade-title">$250.00 Swap</span>
+                <span class="trade-route">USDC → WETH</span>
+              </div>
+              <span class="trade-badge badge-auto">Auto-executed</span>
+            </div>
+            <div class="flow-trade-bottom">
+              <span class="trade-metric">&lt; $1,000 threshold</span>
+              <span class="trade-verdict text-ok"><span class="check-symbol">✓</span> Settled on Uniswap V3</span>
+            </div>
+          </div>
+
+          <div class="flow-divider">
+            <span class="flow-divider-line"></span>
+            <span class="flow-divider-text">Threshold Gate ($1,000)</span>
+            <span class="flow-divider-line"></span>
+          </div>
+
+          <!-- Trade 2: High-value requiring human approval -->
+          <div class="flow-trade-box flow-trade--gate" id="hero-gate-box">
+            <div class="flow-trade-top">
+              <div class="flow-trade-info">
+                <span class="trade-title">$5,000.00 Swap</span>
+                <span class="trade-route">USDC → WETH</span>
+              </div>
+              <span class="trade-badge badge-gate">Human approval</span>
+            </div>
+
+            <div class="flow-interactive-row">
+              <span class="trade-metric">&ge; $1,000 threshold</span>
+              <div class="state-selector" role="tablist" aria-label="Simulate flow state">
+                <button type="button" class="state-pill is-active" data-flow-state="pending">Pending</button>
+                <button type="button" class="state-pill" data-flow-state="approved">Approved</button>
+                <button type="button" class="state-pill" data-flow-state="denied">Denied</button>
+              </div>
+            </div>
+
+            <div class="flow-outcome" id="flow-outcome-text">
+              <div class="flow-outcome-row outcome-pending">
+                <span class="pulse-amber">●</span>
+                <span>Held onchain · Awaiting World ID Agent Pass</span>
+              </div>
+              <div class="flow-outcome-row outcome-approved" hidden>
+                <span class="check-green">✓</span>
+                <span>Attestation verified · Settled on Uniswap V3</span>
+              </div>
+              <div class="flow-outcome-row outcome-denied" hidden>
+                <span class="cross-red">✕</span>
+                <span>Rejected by owner · Trade cancelled onchain</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </main>
 
   <footer class="stats">
     <div class="stat appear appear--stat" style="--d:1.12s">
-      <svg class="stat-icon" viewBox="0 0 24 24" aria-hidden="true">
-        <defs>
-          <linearGradient id="pillA" x1="3" y1="2" x2="14" y2="22" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="#ffffff" stop-opacity="0.38"/>
-            <stop offset="1" stop-color="#3a3a3a" stop-opacity="0.62"/>
-          </linearGradient>
-          <linearGradient id="pillB" x1="13" y1="2" x2="24" y2="22" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="#3a3a3a" stop-opacity="0.38"/>
-            <stop offset="1" stop-color="#ffffff" stop-opacity="0.62"/>
-          </linearGradient>
-        </defs>
-        <rect x="3.4" y="2.6" width="7.2" height="18.8" rx="3.6" fill="url(#pillA)"/>
-        <rect x="13.4" y="2.6" width="7.2" height="18.8" rx="3.6" fill="url(#pillB)"/>
-        <rect x="9.2" y="10.9" width="5.6" height="2.2" rx="1.1" fill="#4a4a4a"/>
+      <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="4"/>
+        <path d="m9 12 2 2 4-4"/>
       </svg>
-      <span><span data-live="contract-count">3</span> contracts live on Sepolia</span>
+      <span><strong data-live="contract-count">3</strong> contracts live on Sepolia</span>
     </div>
 
-    <div class="stat appear appear--stat" style="--d:1.28s">
-      <svg class="stat-icon" viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="2.4" y="2.4" width="19.2" height="19.2" rx="6.2" fill="#ffffff"/>
-        <g fill="none" stroke="#111" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 7.1v7.4"/>
-          <path d="M8.15 12.35L12 16.2l3.85-3.85"/>
-        </g>
+    <div class="stat appear appear--stat" style="--d:1.24s">
+      <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
       </svg>
-      <span>World ID Agent Pass on moves ≥ <span data-live="threshold">$1,000</span></span>
+      <span>Approval gate threshold: <strong data-live="threshold">$1,000</strong></span>
     </div>
 
-    <div class="stat appear appear--stat" style="--d:1.44s">
-      <svg class="stat-icon-wide" viewBox="0 0 40 22" aria-hidden="true">
-        <circle cx="10.2" cy="11" r="9.2" fill="#2b2b2b"/>
-        <text x="10.2" y="15.2" font-family="Inter, system-ui, sans-serif" font-weight="700" font-size="10.5" text-anchor="middle" fill="#7ee2a8">0G</text>
-        <circle cx="20.2" cy="11" r="9.2" fill="#ff007a" stroke="#000" stroke-width="0.8"/>
-        <circle cx="20.2" cy="11" r="4.2" fill="#ffffff"/>
-        <circle cx="30.2" cy="11" r="9.2" fill="#000000" stroke="#fff" stroke-width="0.8"/>
-        <circle cx="30.2" cy="11" r="4" fill="#ffffff"/>
+    <div class="stat appear appear--stat" style="--d:1.36s">
+      <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
       </svg>
-      <span>0G Compute · Uniswap V3 · World ID · 0G Storage</span>
+      <span>Latest 0G audit root: <button class="hash-copy-btn" id="hero-0g-root-btn" type="button" data-copy="0xc9d5549ae5460e519da8ecf0c4a3ef9e954130f20ab26fb101d88969563a213d" title="Click to copy full root hash"><code id="hero-0g-root-label">0xc9d5…213d</code><span class="copy-badge">Copy</span></button></span>
     </div>
   </footer>
 </div>
+
+<!-- ================= LIVE PROOF ON SEPOLIA ================= -->
+<section class="section" id="live-proof">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <span class="eyebrow">Onchain Verification</span>
+      <h2>Live proof on <em>Sepolia</em>.</h2>
+      <p class="lede">Every phase of guardrailed agent execution is recorded on Ethereum Sepolia and 0G. Verified transactions and cryptographic storage receipts from real runs below.</p>
+    </div>
+
+    <!-- Empty State (shown when no data is recorded yet) -->
+    <div class="card proof-empty-state" id="proof-empty" style="display: none;">
+      <div class="empty-icon">⏳</div>
+      <h3>No testnet run recorded yet</h3>
+      <p style="color: var(--muted); margin: 8px 0 16px; max-width: 520px; margin-inline: auto;">Run the end-to-end Sepolia demonstration script to execute real onchain swaps and commit verifiable receipts to 0G Storage:</p>
+      <div style="max-width: 440px; margin: 0 auto 16px;">
+        <code class="cmd">cd contracts &amp;&amp; npm run demo:sepolia</code>
+      </div>
+      <p style="font-size: 12px; color: #777;">Transaction receipts and 0G Merkle roots will automatically appear here once recorded.</p>
+    </div>
+
+    <!-- Timeline of 4-5 cards (rendered dynamically from /api/proof or proof.json) -->
+    <div class="proof-timeline" id="proof-timeline"></div>
+
+    <!-- 0G Proof Panel (rendered dynamically from /api/proof or proof.json) -->
+    <div class="zg-proof-panel reveal" id="zg-proof-panel" style="display: none;">
+      <div class="zg-proof-header">
+        <div class="zg-proof-tag">
+          <span class="zg-badge">0G PROTOCOL PROOF</span>
+          <span>Cryptographic AI &amp; Storage Verification</span>
+        </div>
+        <div class="zg-proof-links">
+          <a class="btn-copy-chip" id="zg-explorer-link" href="https://storagescan.0g.ai" target="_blank" rel="noopener" style="text-decoration:none;">0G Storage Explorer ↗</a>
+          <a class="btn-copy-chip" id="zg-docs-link" href="https://docs.0g.ai" target="_blank" rel="noopener" style="text-decoration:none;">0G Docs ↗</a>
+        </div>
+      </div>
+      <div class="zg-proof-grid">
+        <div class="zg-proof-box">
+          <span class="zg-label">0G Private Compute Request ID</span>
+          <div class="zg-val-row">
+            <span class="zg-val" id="zg-req-id">—</span>
+            <button class="btn-copy-chip" id="zg-req-copy" type="button" data-copy="" title="Copy Request ID">Copy</button>
+          </div>
+        </div>
+        <div class="zg-proof-box">
+          <span class="zg-label">0G Storage Merkle Root Hash</span>
+          <div class="zg-val-row">
+            <span class="zg-val" id="zg-root-hash" title="">—</span>
+            <button class="btn-copy-chip" id="zg-root-copy" type="button" data-copy="" title="Copy Root Hash">Copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= HOW IT WORKS ================= -->
+<section class="section" id="how-it-works">
+  <div class="wrap how">
+    <div>
+      <div class="section-head section-head--left reveal">
+        <span class="eyebrow">How it works</span>
+        <h2>Four phases, <em>one</em> request.</h2>
+        <p class="lede">An agent asks to act. AegisNet checks who it is, builds the route, decides if a human must sign off, then settles it onchain.</p>
+      </div>
+
+      <ol class="steps">
+        <li class="reveal">
+          <span class="step-n">I</span>
+          <div><h3>0G AI Strategy Planning</h3><p>The agent formulates execution parameters in <strong>0G Private Compute</strong> (TEE-attested AI), verifying liquidity and quoting before proposing onchain.</p></div>
+        </li>
+        <li class="reveal">
+          <span class="step-n">II</span>
+          <div><h3>Onchain Limit Check</h3><p><code>AegisExecutionManager</code> verifies that the agent is active, the adapter is whitelisted, and the trade fits within daily spend limits.</p></div>
+        </li>
+        <li class="reveal">
+          <span class="step-n">III</span>
+          <div><h3>World ID Agent Pass</h3><p>Trades at or above the threshold hold onchain pending human approval. The owner clears via World ID Agent Pass, issuing a relayer attestation.</p></div>
+        </li>
+        <li class="reveal">
+          <span class="step-n">IV</span>
+          <div><h3>Uniswap V3 &amp; 0G Storage</h3><p>Once cleared, the manager settles the swap atomically on Uniswap V3 (SwapRouter02) and commits an immutable decision audit record to <strong>0G Storage</strong>.</p></div>
+        </li>
+      </ol>
+    </div>
+
+    <div class="terminal reveal" aria-label="Example request trace">
+      <div class="terminal-bar"><i></i><i></i><i></i><span>request trace</span></div>
+<pre><span class="t-dim"># 1. 0G Private Compute plans &amp; 0G Storage records decision</span>
+<span class="t-key">POST</span> /api/agent/propose  { <span class="t-str">"amountUSD"</span>: 2500 }
+<span class="t-dim">←</span> 0G Req: <span class="t-str">b9fed931…</span> · 0G Root: <span class="t-str">0xc9d554…</span>
+
+<span class="t-dim"># 2. Agent submits to execution manager on Sepolia</span>
+<span class="t-key">requestExecution</span>(uniswapAdapter, swapData, 2500e18)
+<span class="t-dim">←</span> ExecutionRequested  requiresApproval <span class="t-warn">true</span>
+
+<span class="t-dim"># 3. Owner authorizes via World ID Agent Pass</span>
+<span class="t-key">POST</span> /api/worldid/verify  { sessionId, proof }
+<span class="t-dim">←</span> relayer signature <span class="t-ok">✓</span> (nullifier committed)
+
+<span class="t-dim"># 4. Relayer attestation unlocks Uniswap V3 execution</span>
+<span class="t-key">approveWithRelayer</span>(requestId, nullifier, sig)
+<span class="t-key">executeVerifiedTransaction</span>(requestId)
+<span class="t-dim">←</span> SwapExecuted  <span class="t-ok">SETTLED ON SEPOLIA</span></pre>
+    </div>
+  </div>
+</section>
 
 <!-- ================= BENEFITS ================= -->
 <section class="section" id="benefits">
@@ -768,58 +1113,6 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
       <div class="partner"><strong>Uniswap</strong><span>V3 SwapRouter02 execution</span></div>
       <div class="partner"><strong>0G Compute</strong><span>TEE-attested trade planning</span></div>
       <div class="partner"><strong>0G Storage</strong><span>Decentralized audit records</span></div>
-    </div>
-  </div>
-</section>
-
-<!-- ================= HOW IT WORKS ================= -->
-<section class="section" id="how-it-works">
-  <div class="wrap how">
-    <div>
-      <div class="section-head section-head--left reveal">
-        <span class="eyebrow">How it works</span>
-        <h2>Four phases, <em>one</em> request.</h2>
-        <p class="lede">An agent asks to act. AegisNet checks who it is, builds the route, decides if a human must sign off, then settles it onchain.</p>
-      </div>
-
-      <ol class="steps">
-        <li class="reveal">
-          <span class="step-n">I</span>
-          <div><h3>0G AI Strategy Planning</h3><p>The agent formulates execution parameters in <strong>0G Private Compute</strong> (TEE-attested AI), verifying liquidity and quoting before proposing onchain.</p></div>
-        </li>
-        <li class="reveal">
-          <span class="step-n">II</span>
-          <div><h3>Onchain Limit Check</h3><p><code>AegisExecutionManager</code> verifies that the agent is active, the adapter is whitelisted, and the trade fits within daily spend limits.</p></div>
-        </li>
-        <li class="reveal">
-          <span class="step-n">III</span>
-          <div><h3>World ID Agent Pass</h3><p>Trades at or above the threshold hold onchain pending human approval. The owner clears via World ID Agent Pass, issuing a relayer attestation.</p></div>
-        </li>
-        <li class="reveal">
-          <span class="step-n">IV</span>
-          <div><h3>Uniswap V3 &amp; 0G Storage</h3><p>Once cleared, the manager settles the swap atomically on Uniswap V3 (SwapRouter02) and commits an immutable decision audit record to <strong>0G Storage</strong>.</p></div>
-        </li>
-      </ol>
-    </div>
-
-    <div class="terminal reveal" aria-label="Example request trace">
-      <div class="terminal-bar"><i></i><i></i><i></i><span>request trace</span></div>
-<pre><span class="t-dim"># 1. 0G Private Compute plans &amp; 0G Storage records decision</span>
-<span class="t-key">POST</span> /api/agent/propose  { <span class="t-str">"amountUSD"</span>: 2500 }
-<span class="t-dim">←</span> 0G Req: <span class="t-str">b9fed931…</span> · 0G Root: <span class="t-str">0xc9d554…</span>
-
-<span class="t-dim"># 2. Agent submits to execution manager on Sepolia</span>
-<span class="t-key">requestExecution</span>(uniswapAdapter, swapData, 2500e18)
-<span class="t-dim">←</span> ExecutionRequested  requiresApproval <span class="t-warn">true</span>
-
-<span class="t-dim"># 3. Owner authorizes via World ID Agent Pass</span>
-<span class="t-key">POST</span> /api/worldid/verify  { sessionId, proof }
-<span class="t-dim">←</span> relayer signature <span class="t-ok">✓</span> (nullifier committed)
-
-<span class="t-dim"># 4. Relayer attestation unlocks Uniswap V3 execution</span>
-<span class="t-key">approveWithRelayer</span>(requestId, nullifier, sig)
-<span class="t-key">executeVerifiedTransaction</span>(requestId)
-<span class="t-dim">←</span> SwapExecuted  <span class="t-ok">SETTLED ON SEPOLIA</span></pre>
     </div>
   </div>
 </section>
@@ -1189,6 +1482,209 @@ npm start   # → http://localhost:4000</code></li>
         if (h.contracts) renderContractsTable(h.contracts);
       })
       .catch(function () { tryBase(i + 1); });
+  })(0);
+
+  // ---- Hero Approval Flow Card Interactive Tabs ----
+  var gateBox = document.getElementById('hero-gate-box');
+  if (gateBox) {
+    var pills = gateBox.querySelectorAll('.state-pill');
+    pills.forEach(function (pill) {
+      pill.addEventListener('click', function () {
+        var state = pill.getAttribute('data-flow-state');
+        pills.forEach(function (p) { p.classList.toggle('is-active', p === pill); });
+        ['pending', 'approved', 'denied'].forEach(function (s) {
+          var row = gateBox.querySelector('.outcome-' + s);
+          if (row) row.hidden = (s !== state);
+        });
+      });
+    });
+  }
+
+  // ---- Universal Clipboard Copy Handler ----
+  function fallbackCopy(text, cb) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try { document.execCommand('copy'); if (cb) cb(); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-copy]');
+    if (!btn) return;
+    var val = btn.getAttribute('data-copy');
+    if (!val) return;
+    function notify() {
+      var badge = btn.querySelector('.copy-badge') || btn;
+      var prev = badge.textContent;
+      badge.textContent = 'Copied ✓';
+      btn.classList.add('is-copied');
+      setTimeout(function () {
+        badge.textContent = prev;
+        btn.classList.remove('is-copied');
+      }, 1800);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(val).then(notify).catch(function () {
+        fallbackCopy(val, notify);
+      });
+    } else {
+      fallbackCopy(val, notify);
+    }
+  });
+
+  // ---- Live Proof on Sepolia Timeline & 0G Panel ----
+  var TIMELINE_CONFIG = [
+    {
+      key: 'autoSwap',
+      step: 'PHASE I',
+      fallbackLabel: 'Auto swap',
+      badgeClass: 'badge-ok',
+      defaultStatus: 'EXECUTED',
+      fallbackSummary: 'Low-value trade auto-executed atomically on Sepolia in a single transaction without human delay.'
+    },
+    {
+      key: 'approvalRequested',
+      step: 'PHASE II',
+      fallbackLabel: 'Approval requested',
+      badgeClass: 'badge-warn',
+      defaultStatus: 'PENDING',
+      fallbackSummary: 'High-value trade intercepted and held onchain on Sepolia awaiting World ID Agent Pass human approval.'
+    },
+    {
+      key: 'worldApproved',
+      step: 'PHASE III',
+      fallbackLabel: 'Human approved',
+      badgeClass: 'badge-info',
+      defaultStatus: 'APPROVED',
+      fallbackSummary: 'World ID human proof validated server-side; relayer attestation signed with single-use request nullifier.'
+    },
+    {
+      key: 'swapExecuted',
+      step: 'PHASE IV',
+      fallbackLabel: 'Swap executed',
+      badgeClass: 'badge-ok',
+      defaultStatus: 'SETTLED',
+      fallbackSummary: 'Atomic execution unlocked on Sepolia through AegisExecutionManager.approveWithRelayer into Uniswap V3.'
+    },
+    {
+      key: 'blockedDenied',
+      step: 'SAFETY',
+      fallbackLabel: 'Denied: blocked',
+      badgeClass: 'badge-bad',
+      defaultStatus: 'DENIED',
+      fallbackSummary: 'Operator explicitly rejected the trade; request cancelled onchain via cancelRequest, leaving trade unexecuted.'
+    }
+  ];
+
+  function renderProofTimeline(proof) {
+    var timelineEl = document.getElementById('proof-timeline');
+    var emptyEl = document.getElementById('proof-empty');
+    var zgPanel = document.getElementById('zg-proof-panel');
+    if (!timelineEl) return;
+
+    var trades = proof && proof.trades;
+    var hasValidTrade = trades && TIMELINE_CONFIG.some(function (c) {
+      return trades[c.key] && (trades[c.key].txHash || trades[c.key].requestId);
+    });
+
+    if (!hasValidTrade) {
+      if (emptyEl) emptyEl.style.display = 'block';
+      timelineEl.innerHTML = '';
+      if (zgPanel) zgPanel.style.display = 'none';
+      return;
+    }
+
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    var cardsHtml = TIMELINE_CONFIG.map(function (cfg, idx) {
+      var item = trades[cfg.key] || {};
+      var txHash = item.txHash || item.requestId || '';
+      var shortHash = txHash ? (txHash.slice(0, 6) + '…' + txHash.slice(-4)) : '—';
+      var txUrl = txHash ? ('https://sepolia.etherscan.io/tx/' + txHash) : '#';
+      var status = item.status || cfg.defaultStatus;
+      var label = item.label || cfg.fallbackLabel;
+      var summary = item.summary || cfg.fallbackSummary;
+      var delay = (idx * 0.06).toFixed(2);
+
+      return '<article class="card proof-card reveal" style="--rd:' + delay + 's" data-card="' + esc(cfg.key) + '">' +
+        '<div>' +
+          '<div class="proof-card-top">' +
+            '<span class="proof-step">' + esc(cfg.step) + '</span>' +
+            '<span class="badge-status ' + esc(cfg.badgeClass) + '">' + esc(status) + '</span>' +
+          '</div>' +
+          '<h3 class="proof-title">' + esc(label) + '</h3>' +
+          '<p class="proof-desc">' + esc(summary) + '</p>' +
+        '</div>' +
+        '<div class="proof-tx-box">' +
+          '<a class="proof-tx-link" href="' + esc(txUrl) + '" target="_blank" rel="noopener" title="' + esc(txHash) + '">' +
+            '<span>' + esc(shortHash) + '</span>' +
+            '<svg class="ext-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>' +
+          '</a>' +
+          (txHash ? '<button class="btn-copy-chip" type="button" data-copy="' + esc(txHash) + '" title="Copy tx hash">Copy</button>' : '') +
+        '</div>' +
+      '</article>';
+    }).join('');
+
+    timelineEl.innerHTML = cardsHtml;
+
+    // 0G Proof Panel
+    if (proof.zg) {
+      if (zgPanel) zgPanel.style.display = 'block';
+      var reqIdEl = document.getElementById('zg-req-id');
+      var reqCopy = document.getElementById('zg-req-copy');
+      var rootHashEl = document.getElementById('zg-root-hash');
+      var rootCopy = document.getElementById('zg-root-copy');
+      var explorerLink = document.getElementById('zg-explorer-link');
+      var docsLink = document.getElementById('zg-docs-link');
+
+      if (reqIdEl && proof.zg.requestId) reqIdEl.textContent = proof.zg.requestId;
+      if (reqCopy && proof.zg.requestId) reqCopy.setAttribute('data-copy', proof.zg.requestId);
+      if (rootHashEl && proof.zg.rootHash) {
+        rootHashEl.textContent = proof.zg.rootHash;
+        rootHashEl.title = proof.zg.rootHash;
+      }
+      if (rootCopy && proof.zg.rootHash) rootCopy.setAttribute('data-copy', proof.zg.rootHash);
+      if (explorerLink && (proof.zg.explorerUrl || proof.zg.rootHash)) {
+        explorerLink.href = proof.zg.explorerUrl || ('https://storagescan.0g.ai/file/' + proof.zg.rootHash);
+      }
+      if (docsLink && proof.zg.docsUrl) docsLink.href = proof.zg.docsUrl;
+
+      // Also update hero stat bar 0G root button if present
+      var heroRootBtn = document.getElementById('hero-0g-root-btn');
+      var heroRootLabel = document.getElementById('hero-0g-root-label');
+      if (heroRootBtn && proof.zg.rootHash) heroRootBtn.setAttribute('data-copy', proof.zg.rootHash);
+      if (heroRootLabel && proof.zg.rootHash) {
+        heroRootLabel.textContent = proof.zg.rootHash.slice(0, 6) + '…' + proof.zg.rootHash.slice(-4);
+      }
+    }
+  }
+
+  // Load proof data with fallbacks: /api/proof, localhost:4000/api/proof, proof.json
+  (function loadProofData(i) {
+    var proofEndpoints = [
+      (location.protocol.startsWith('http') ? '' : 'http://localhost:4000') + '/api/proof',
+      'http://localhost:4000/api/proof',
+      'proof.json'
+    ];
+    if (i >= proofEndpoints.length) {
+      renderProofTimeline(null);
+      return;
+    }
+    fetch(proofEndpoints[i])
+      .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+      .then(function (res) {
+        var data = (res && res.trades) ? res : ((res && res.data && res.data.trades) ? res.data : null);
+        if (!data || !data.trades) throw new Error();
+        renderProofTimeline(data);
+      })
+      .catch(function () {
+        loadProofData(i + 1);
+      });
   })(0);
 
   // ---- Wallet: connect, then go to the dashboard ----

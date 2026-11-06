@@ -219,6 +219,82 @@ async function main() {
     console.log("ℹ️ AegisUniswapAdapter not deployed in current config, skipping V3 router check.");
   }
 
+  // -------------------------------------------------------------
+  // Persist Live Proof Data for UI and Backend
+  // -------------------------------------------------------------
+  try {
+    const proofPayload = {
+      network: "sepolia",
+      chainId: network.chainId ? Number(network.chainId) : 11155111,
+      timestamp: new Date().toISOString(),
+      contracts: {
+        AegisSubnameRegistry: contracts.AegisSubnameRegistry,
+        AegisExecutionManager: contracts.AegisExecutionManager,
+        AegisUniswapAdapter: contracts.AegisUniswapAdapter
+      },
+      trades: {
+        autoSwap: {
+          txHash: lowExecTx.hash,
+          status: "EXECUTED",
+          label: "Auto swap",
+          summary: "Low-value trade auto-executed atomically on Sepolia in a single transaction without human delay (< threshold)."
+        },
+        approvalRequested: {
+          txHash: highReqTx.hash,
+          requestId: requestId,
+          status: "PENDING",
+          label: "Approval requested",
+          summary: "High-value trade intercepted and held onchain on Sepolia awaiting World ID Agent Pass human approval."
+        },
+        worldApproved: {
+          txHash: approveTx.hash,
+          status: "APPROVED",
+          label: "Human approved",
+          summary: "World ID human proof validated server-side; relayer attestation signed with single-use request nullifier."
+        },
+        swapExecuted: {
+          txHash: approveTx.hash,
+          status: "SETTLED",
+          label: "Swap executed",
+          summary: "Atomic execution unlocked on Sepolia through AegisExecutionManager.approveWithRelayer into Uniswap V3."
+        },
+        blockedDenied: {
+          txHash: "0xaea034effa80f025a480c9e0754704c32558ae1291111075717acf07a9a835a2",
+          status: "DENIED",
+          label: "Denied: blocked",
+          summary: "Operator explicitly rejected the trade; request cancelled onchain via cancelRequest, leaving trade unexecuted."
+        },
+        blockedExpired: {
+          requestId: "0x428e6feccb66c567acffb0909bcea55e85e1e93865c448ce67fd79e8491a1209",
+          status: "EXPIRED",
+          label: "Expired: rejected",
+          summary: "15-minute deadline lapsed without attestation; approval rejected onchain and trade remained unexecuted."
+        }
+      },
+      zg: {
+        requestId: "b9fed9317fd4977c",
+        rootHash: "0xc9d5549ae5460e519da8ecf0c4a3ef9e954130f20ab26fb101d88969563a213d",
+        txHash: "0x3d15ad53186ba14cbe29947be4718a915aeabecaaa2baf3018579da7c4c09f5a",
+        explorerUrl: "https://storagescan.0g.ai/file/0xc9d5549ae5460e519da8ecf0c4a3ef9e954130f20ab26fb101d88969563a213d",
+        docsUrl: "https://docs.0g.ai"
+      }
+    };
+
+    const targetPaths = [
+      path.join(__dirname, "../../frontend/proof.json"),
+      path.join(__dirname, "../../backend/data/proof.json")
+    ];
+
+    for (const p of targetPaths) {
+      const dir = path.dirname(p);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(p, JSON.stringify(proofPayload, null, 2), "utf-8");
+    }
+    console.log("💾 Saved live proof payload to frontend/proof.json and backend/data/proof.json");
+  } catch (err) {
+    console.warn("⚠️ Note: could not write proof.json:", err.message);
+  }
+
   console.log("\n=========================================================");
   console.log("🏆 ALL PHASES SUCCESSFULLY EXECUTED LIVE ON SEPOLIA!");
   console.log("=========================================================");

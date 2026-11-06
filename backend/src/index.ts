@@ -101,6 +101,44 @@ app.get('/api/abis', (_req, res) => {
   res.json({ registry: RegistryABI, manager: ManagerABI, uniswapAdapter: UniswapAdapterABI, adapter: AdapterABI });
 });
 
+app.get('/api/proof', async (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache');
+  const candidatePaths = [
+    path.join(config.dataDir, 'proof.json'),
+    path.resolve(__dirname, '../../frontend/proof.json'),
+    path.resolve(__dirname, '../data/proof.json'),
+  ];
+
+  let proofData: any = null;
+  for (const p of candidatePaths) {
+    if (fs.existsSync(p)) {
+      try {
+        proofData = JSON.parse(fs.readFileSync(p, 'utf-8'));
+        break;
+      } catch {}
+    }
+  }
+
+  if (!proofData) {
+    return res.status(200).json({
+      success: false,
+      message: 'No run recorded yet',
+      trades: null,
+      zg: null,
+    });
+  }
+
+  // Overlay dynamic 0G status if recorded during active runtime
+  const zgReq = zgProofService.getLatestRequestId();
+  const zgRoot = zgProofService.getLatestRootHash();
+  const zgTx = zgProofService.getLatestTxHash();
+  if (zgReq) proofData.zg.requestId = zgReq;
+  if (zgRoot) proofData.zg.rootHash = zgRoot;
+  if (zgTx) proofData.zg.txHash = zgTx;
+
+  res.json({ success: true, ...proofData });
+});
+
 // ---------------------------------------------------------------------------
 // Route modules
 // ---------------------------------------------------------------------------

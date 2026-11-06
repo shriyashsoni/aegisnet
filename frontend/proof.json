@@ -1,0 +1,57 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "timestamp": "2026-11-06T11:09:26.368Z",
+  "contracts": {
+    "AegisSubnameRegistry": "0x815893baD1708a201eEEAF226eeD576A7Ffea4BC",
+    "AegisExecutionManager": "0x8d5b392839300b487adDeeCc35F5BC534111CD33",
+    "AegisUniswapAdapter": "0xAaD03d978d84ccA70125F998b61ff7b539F565f4"
+  },
+  "trades": {
+    "autoSwap": {
+      "txHash": "0x79640a20abab184f469218c0774b4c809e1944f3fe6bcab771f21f42ffccb0dd",
+      "status": "EXECUTED",
+      "label": "Auto swap",
+      "summary": "Low-value trade ($0.30 USD) auto-executed atomically on Sepolia in a single transaction without human delay (< $1.00 threshold)."
+    },
+    "approvalRequested": {
+      "txHash": "0xd530468647deee80ddb3a3a4836894aa1b08b4d28159eb313dfcc47ebda32f42",
+      "requestId": "0xd530468647deee80ddb3a3a4836894aa1b08b4d28159eb313dfcc47ebda32f42",
+      "status": "PENDING",
+      "label": "Approval requested",
+      "summary": "High-value trade ($3.00 USD) intercepted and held onchain on Sepolia awaiting World ID Agent Pass human approval."
+    },
+    "worldApproved": {
+      "txHash": "0x6d7a5084f3b842d5bf0280b9b38928429d4c9853966a3fb8fa722cf4679ca596",
+      "status": "APPROVED",
+      "label": "Human approved",
+      "summary": "World ID human proof validated server-side; relayer attestation signed with single-use request nullifier."
+    },
+    "swapExecuted": {
+      "txHash": "0x6d7a5084f3b842d5bf0280b9b38928429d4c9853966a3fb8fa722cf4679ca596",
+      "status": "SETTLED",
+      "label": "Swap executed",
+      "summary": "Atomic execution unlocked on Sepolia through AegisExecutionManager.approveWithRelayer into Uniswap V3."
+    },
+    "blockedDenied": {
+      "txHash": "0xaea034effa80f025a480c9e0754704c32558ae1291111075717acf07a9a835a2",
+      "status": "DENIED",
+      "label": "Denied: blocked",
+      "summary": "Operator explicitly rejected the trade; request cancelled onchain via cancelRequest, leaving trade unexecuted."
+    },
+    "blockedExpired": {
+      "requestId": "0x428e6feccb66c567acffb0909bcea55e85e1e93865c448ce67fd79e8491a1209",
+      "status": "EXPIRED",
+      "label": "Expired: rejected",
+      "summary": "15-minute deadline lapsed without attestation; approval rejected onchain and trade remained unexecuted."
+    }
+  },
+  "zg": {
+    "requestId": "b9fed9317fd4977c",
+    "rootHash": "0xc9d5549ae5460e519da8ecf0c4a3ef9e954130f20ab26fb101d88969563a213d",
+    "txHash": "0x3d15ad53186ba14cbe29947be4718a915aeabecaaa2baf3018579da7c4c09f5a",
+    "explorerUrl": "https://storagescan.0g.ai/file/0xc9d5549ae5460e519da8ecf0c4a3ef9e954130f20ab26fb101d88969563a213d",
+    "docsUrl": "https://docs.0g.ai"
+  }
+}
+
