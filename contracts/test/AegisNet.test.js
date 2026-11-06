@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
+const { time } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("AegisNet Matrix Core Protocol Tests", function () {
   let owner, agent, user;
@@ -411,6 +412,85 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
       await expect(
         executionManager.connect(user).approveWithRelayer(requestId, nullifier, forgedSig)
       ).to.be.revertedWith("AegisManager: invalid relayer signature");
+    });
+
+    it("Should enforce daily spend limit on requestExecution (under-limit, over-limit, and next-day reset)", async function () {
+      const customSubname = "agent-limit";
+      await registry.connect(owner).registerSubname(
+        customSubname,
+        user.address,
+        ethers.parseEther("500"),
+        ethers.parseEther("1000")
+      );
+      const subnameNode = await registry.agentToNode(user.address);
+      await registry.connect(owner).setTargetContractWhitelist(
+        subnameNode,
+        await swapVMAdapter.getAddress(),
+        true
+      );
+
+      const instructions = [{
+        opcode: 1,
+        tokenIn: await mockToken.getAddress(),
+        tokenOut: await mockToken.getAddress(),
+        amountIn: ethers.parseEther("100"),
+        minAmountOut: ethers.parseEther("99"),
+        extraData: "0x"
+      }];
+      const encodedCall = swapVMAdapter.interface.encodeFunctionData("executeSwapVMRoute", [
+        ethers.AbiCoder.defaultAbiCoder().encode(
+          ["tuple(uint8 opcode, address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, bytes extraData)[]"],
+          [instructions]
+        )
+      ]);
+
+      // 1. Under-limit request: $400 USD (auto-executes because < $500 threshold)
+      const tx1 = await executionManager.connect(user).requestExecution(
+        await swapVMAdapter.getAddress(),
+        encodedCall,
+        ethers.parseEther("400")
+      );
+      await tx1.wait();
+
+      const permAfter1 = await registry.getAgentPermissions(subnameNode);
+      expect(permAfter1.currentDailySpent).to.equal(ethers.parseEther("400"));
+
+      // 2. Over-limit request: $700 USD ($400 + $700 = $1,100 > $1,000 limit) -> Reverts
+      await expect(
+        executionManager.connect(user).requestExecution(
+          await swapVMAdapter.getAddress(),
+          encodedCall,
+          ethers.parseEther("700")
+        )
+      ).to.be.revertedWith("AegisManager: daily limit exceeded");
+
+      // Another under-limit: $500 USD ($400 + $500 = $900 <= $1,000) -> Allowed
+      const tx2 = await executionManager.connect(user).requestExecution(
+        await swapVMAdapter.getAddress(),
+        encodedCall,
+        ethers.parseEther("500")
+      );
+      await tx2.wait();
+
+      // Over limit check: $400 + $650 = $1,050 > $1,000
+      await expect(
+        executionManager.connect(user).requestExecution(
+          await swapVMAdapter.getAddress(),
+          encodedCall,
+          ethers.parseEther("650")
+        )
+      ).to.be.revertedWith("AegisManager: daily limit exceeded");
+
+      // 3. Fast-forward to the next day (25 hours)
+      await time.increase(25 * 3600);
+
+      // Next-day reset: now a $800 request succeeds!
+      const tx3 = await executionManager.connect(user).requestExecution(
+        await swapVMAdapter.getAddress(),
+        encodedCall,
+        ethers.parseEther("800")
+      );
+      await tx3.wait();
     });
   });
 

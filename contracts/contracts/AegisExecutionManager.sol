@@ -88,6 +88,18 @@ contract AegisExecutionManager {
 
         require(isAllowed, "AegisManager: Agent or target not authorized by ENS EAC");
 
+        // Enforce daily spend limit check against already-recorded spend with per-day reset
+        IAegisSubnameRegistry.AgentPermissions memory perm = registry.getAgentPermissions(subnameNode);
+        if (perm.dailySpendingLimit > 0) {
+            uint256 currentSpent = (block.timestamp / 1 days > perm.lastSpentTimestamp / 1 days)
+                ? 0
+                : perm.currentDailySpent;
+            require(
+                currentSpent + valueUSD <= perm.dailySpendingLimit,
+                "AegisManager: daily limit exceeded"
+            );
+        }
+
         requestId = keccak256(
             abi.encodePacked(
                 msg.sender,

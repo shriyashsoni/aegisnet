@@ -157,8 +157,8 @@ contract AegisSubnameRegistry is IAegisSubnameRegistry {
         AgentPermissions storage perm = agentRegistry[subnameNode];
         require(perm.isActive, "AegisRegistry: subname inactive");
 
-        // Reset daily spend if 24 hours elapsed
-        if (block.timestamp >= perm.lastSpentTimestamp + 1 days) {
+        // Reset daily spend if a new calendar day has started (block.timestamp / 1 days)
+        if (block.timestamp / 1 days > perm.lastSpentTimestamp / 1 days) {
             perm.currentDailySpent = amountUSD;
             perm.lastSpentTimestamp = block.timestamp;
         } else {
