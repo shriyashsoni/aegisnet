@@ -2,20 +2,22 @@
 pragma solidity ^0.8.24;
 
 /**
- * @title AegisSwapVMAdapter
- * @notice 1inch SwapVM & Aqua Protocol Adapter for AegisNet
- * @dev Decodes custom SwapVM bytecode/opcodes for automated multi-hop yield & Aqua position execution
+ * @title AegisSwapVMAdapter (OUT OF SCOPE / DEPRECATED)
+ * @notice Prototype 1inch SwapVM & Aqua simulated opcode router
+ * @dev [OUT OF SCOPE]: The 1inch SwapVM and Aqua opcode layer was a hackathon concept prototype
+ * and is officially marked OUT OF SCOPE. Real on-chain trades, token balance transfers, and approvals
+ * are executed exclusively via AegisUniswapAdapter through official Uniswap SwapRouter02 contracts.
  */
 contract AegisSwapVMAdapter {
     address public immutable manager;
 
-    // SwapVM Custom Opcode Constants (1inch Aqua Track)
+    // [OUT OF SCOPE] Legacy 1inch SwapVM Prototype Opcode Constants
     uint8 public constant OP_EXCHANGE_SWAP = 0x01;
     uint8 public constant OP_SPLIT_ROUTE = 0x02;
     uint8 public constant OP_VERIFY_MIN_OUTPUT = 0x03;
     uint8 public constant OP_UNISWAP_V4_HOP = 0x04;
-    uint8 public constant OP_AQUA_DEPOSIT = 0x05;    // Custom 1inch Aqua position minting
-    uint8 public constant OP_AQUA_WITHDRAW = 0x06;   // Custom 1inch Aqua position rebalancing
+    uint8 public constant OP_AQUA_DEPOSIT = 0x05;    // [OUT OF SCOPE] Labeled prototype
+    uint8 public constant OP_AQUA_WITHDRAW = 0x06;   // [OUT OF SCOPE] Labeled prototype
 
     struct SwapInstruction {
         uint8 opcode;

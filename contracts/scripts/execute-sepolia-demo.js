@@ -162,25 +162,28 @@ async function main() {
   console.log(`🛡️ Biometric Interception Triggered! Request ID: ${requestId}`);
   console.log(`Requires Biometrics: ${parsedReqEvent.args.requiresBiometrics}`);
 
-  console.log("\nSimulating World ID ZK Biometric Verification via Relayer...");
+  console.log("\nSimulating World ID Agent Pass Verification via Relayer...");
   const nullifierHash = 987654321;
   const managerAddr = contracts.AegisExecutionManager;
   const network = await ethers.provider.getNetwork();
+  const latestBlock = await ethers.provider.getBlock("latest");
+  const deadline = latestBlock.timestamp + 15 * 60;
 
   const messageHash = ethers.solidityPackedKeccak256(
-    ["bytes32", "uint256", "address", "uint256"],
-    [requestId, nullifierHash, managerAddr, network.chainId]
+    ["bytes32", "uint256", "uint256", "address", "uint256"],
+    [requestId, nullifierHash, deadline, managerAddr, network.chainId]
   );
   const sig = await deployer.signMessage(ethers.getBytes(messageHash));
 
-  const bioTx = await manager.verifyBiometricsWithRelayer(requestId, nullifierHash, sig);
-  await bioTx.wait();
-  console.log(`✅ Biometric ZK Proof Verified! Tx: ${bioTx.hash}`);
-
-  console.log("Executing verified high-value transaction on Sepolia...");
-  const finalExecTx = await manager.executeVerifiedTransaction(requestId);
-  await finalExecTx.wait();
-  console.log(`🎉 High-value 1inch Aqua transaction executed on Sepolia! Tx: ${finalExecTx.hash}`);
+  console.log("Submitting World ID Agent Pass attestation & atomically executing on Sepolia...");
+  const approveTx = await manager["approveWithRelayer(bytes32,uint256,uint256,bytes)"](
+    requestId,
+    nullifierHash,
+    deadline,
+    sig
+  );
+  await approveTx.wait();
+  console.log(`🎉 High-value 1inch Aqua transaction approved & executed on Sepolia! Tx: ${approveTx.hash}`);
 
   // -------------------------------------------------------------
   // PHASE IV: Uniswap v4 Agent-Gated Hook Test

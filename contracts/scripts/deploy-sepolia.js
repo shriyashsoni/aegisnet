@@ -19,9 +19,8 @@ async function main() {
   }
 
   const rootName = process.env.ENS_ROOT_NAME || "aegisnet.eth";
-  const worldIdSepoliaRouter = process.env.WORLD_ID_SEPOLIA_ROUTER || "0x719683F13Eeea7D84fCBa5d7d17Bf82e03E3d260";
-  const worldIdGroupId = process.env.WORLD_ID_GROUP_ID || 1;
   const externalNullifier = process.env.WORLD_ID_EXTERNAL_NULLIFIER || 1;
+  const relayerSigner = process.env.RELAYER_ADDRESS || deployer.address;
 
   // 1. AegisSubnameRegistry
   console.log("\n1. Deploying AegisSubnameRegistry...");
@@ -33,11 +32,12 @@ async function main() {
 
   // 2. AegisExecutionManager
   console.log("\n2. Deploying AegisExecutionManager...");
+  console.log(`> Relayer Signer Account: ${relayerSigner}`);
   const Manager = await ethers.getContractFactory("AegisExecutionManager");
   const manager = await Manager.deploy(
     registryAddr,
     externalNullifier,
-    deployer.address // Relayer signer
+    relayerSigner
   );
   await manager.waitForDeployment();
   const managerAddr = await manager.getAddress();

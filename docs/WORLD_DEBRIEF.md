@@ -79,3 +79,4 @@ This would allow any developer building autonomous agents to implement human-in-
   Record a short demo video showing the Human Approval Gate modal pop up when an autonomous agent executes a $2,500 trade, and demonstrate the "Deny Trade" or "Verify Human" action.
 - [ ] **[USER ACTION REQUIRED] Team Information:**  
   Add your team members' handles and roles to the hackathon project portal.
+
