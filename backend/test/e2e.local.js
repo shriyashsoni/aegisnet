@@ -54,12 +54,16 @@ const reason = (e) => e.reason || e.shortMessage || e.message;
   console.log('3. $2,500 trade pauses, World ID attestation, owner approves + executes');
   const t2 = await trade(2500, 'Split swap USDC to ETH for the best price');
   ok(t2.bio && !t2.executed, 'paused onchain waiting for biometrics');
+  ok(await manager.isRequestPending(t2.requestId), 'view helper confirms request is pending');
   const worldNullifier = '0x' + '11'.repeat(31);
   const att = await call('/api/worldid/attest', { requestId: t2.requestId, nullifier_hash: worldNullifier });
   ok(att.success && att.signature, 'backend attested; owner bound to this human: ' + att.newlyBound);
-  await (await manager.verifyBiometricsWithRelayer(t2.requestId, BigInt(att.nullifierHash), att.signature)).wait();
+  await (await manager.approveWithRelayer(t2.requestId, BigInt(att.nullifierHash), att.signature)).wait();
+  ok(await manager.isRequestReadyForExecution(t2.requestId), 'view helper confirms request is approved and ready');
+  ok(await manager.isNullifierUsed(BigInt(att.nullifierHash)), 'view helper confirms nullifier is marked used');
   const ex = await (await manager.executeVerifiedTransaction(t2.requestId)).wait();
   ok(!!parse(manager, ex, 'ExecutionExecuted'), 'executed after approval');
+  ok(!(await manager.isRequestReadyForExecution(t2.requestId)), 'view helper confirms executed request is no longer ready');
   const again = await call('/api/worldid/attest', { requestId: t2.requestId, nullifier_hash: worldNullifier });
   ok(again.status === 409, 'second attestation for the same request rejected: ' + again.error);
 
