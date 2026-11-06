@@ -289,6 +289,104 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
       const execEvent = execReceipt.logs.find(log => log.fragment && log.fragment.name === "ExecutionExecuted");
       expect(execEvent.args.success).to.be.true;
     });
+
+    it("Should accurately track request lifecycle via view helpers", async function () {
+      const instructions = [{
+        opcode: 1,
+        tokenIn: await mockToken.getAddress(),
+        tokenOut: await mockToken.getAddress(),
+        amountIn: ethers.parseEther("1500"),
+        minAmountOut: ethers.parseEther("1480"),
+        extraData: "0x"
+      }];
+
+      const encodedCall = swapVMAdapter.interface.encodeFunctionData("executeSwapVMRoute", [
+        ethers.AbiCoder.defaultAbiCoder().encode(
+          ["tuple(uint8 opcode, address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, bytes extraData)[]"],
+          [instructions]
+        )
+      ]);
+
+      const tx = await executionManager.connect(agent).requestExecution(
+        await swapVMAdapter.getAddress(),
+        encodedCall,
+        ethers.parseEther("1500")
+      );
+      const receipt = await tx.wait();
+      const reqEvent = receipt.logs.find(log => log.fragment && log.fragment.name === "ExecutionRequested");
+      const requestId = reqEvent.args.requestId;
+
+      // Check view helpers when pending
+      expect(await executionManager.isRequestPending(requestId)).to.be.true;
+      expect(await executionManager.isRequestReadyForExecution(requestId)).to.be.false;
+
+      const nullifier = 999888777;
+      expect(await executionManager.isNullifierUsed(nullifier)).to.be.false;
+
+      const managerAddr = await executionManager.getAddress();
+      const network = await ethers.provider.getNetwork();
+      const messageHash = ethers.solidityPackedKeccak256(
+        ["bytes32", "uint256", "address", "uint256"],
+        [requestId, nullifier, managerAddr, network.chainId]
+      );
+      const sig = await owner.signMessage(ethers.getBytes(messageHash));
+
+      await executionManager.connect(user).approveWithRelayer(requestId, nullifier, sig);
+
+      // Now request is ready for execution, and nullifier is consumed
+      expect(await executionManager.isRequestPending(requestId)).to.be.false;
+      expect(await executionManager.isRequestReadyForExecution(requestId)).to.be.true;
+      expect(await executionManager.isNullifierUsed(nullifier)).to.be.true;
+
+      const details = await executionManager.getExecutionRequest(requestId);
+      expect(details.isVerified).to.be.true;
+      expect(details.isExecuted).to.be.false;
+
+      await executionManager.connect(agent).executeVerifiedTransaction(requestId);
+      expect(await executionManager.isRequestReadyForExecution(requestId)).to.be.false;
+    });
+
+    it("Should reject approveWithRelayer with invalid or forged signature", async function () {
+      const instructions = [{
+        opcode: 1,
+        tokenIn: await mockToken.getAddress(),
+        tokenOut: await mockToken.getAddress(),
+        amountIn: ethers.parseEther("2000"),
+        minAmountOut: ethers.parseEther("1980"),
+        extraData: "0x"
+      }];
+
+      const encodedCall = swapVMAdapter.interface.encodeFunctionData("executeSwapVMRoute", [
+        ethers.AbiCoder.defaultAbiCoder().encode(
+          ["tuple(uint8 opcode, address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, bytes extraData)[]"],
+          [instructions]
+        )
+      ]);
+
+      const tx = await executionManager.connect(agent).requestExecution(
+        await swapVMAdapter.getAddress(),
+        encodedCall,
+        ethers.parseEther("2000")
+      );
+      const receipt = await tx.wait();
+      const requestId = receipt.logs.find(log => log.fragment && log.fragment.name === "ExecutionRequested").args.requestId;
+
+      const nullifier = 555444333;
+      const managerAddr = await executionManager.getAddress();
+      const network = await ethers.provider.getNetwork();
+
+      const messageHash = ethers.solidityPackedKeccak256(
+        ["bytes32", "uint256", "address", "uint256"],
+        [requestId, nullifier, managerAddr, network.chainId]
+      );
+
+      // Sign with unauthorized key (user instead of relayer/owner)
+      const forgedSig = await user.signMessage(ethers.getBytes(messageHash));
+
+      await expect(
+        executionManager.connect(user).approveWithRelayer(requestId, nullifier, forgedSig)
+      ).to.be.revertedWith("AegisManager: invalid relayer signature");
+    });
   });
 
   describe("Phase IV: Uniswap v4 Agent-Gated Hook", function () {

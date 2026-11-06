@@ -208,6 +208,36 @@ contract AegisExecutionManager {
         emit ExecutionExecuted(requestId, req.targetContract, success, returnData);
     }
 
+    /**
+     * @notice Returns true if request exists and is awaiting human approval
+     */
+    function isRequestPending(bytes32 requestId) external view returns (bool) {
+        ExecutionRequest storage req = executionRequests[requestId];
+        return req.requestId != bytes32(0) && !req.isVerified && !req.isExecuted && !req.isCancelled;
+    }
+
+    /**
+     * @notice Returns true if request is approved and ready to be executed
+     */
+    function isRequestReadyForExecution(bytes32 requestId) external view returns (bool) {
+        ExecutionRequest storage req = executionRequests[requestId];
+        return req.requestId != bytes32(0) && req.isVerified && !req.isExecuted && !req.isCancelled;
+    }
+
+    /**
+     * @notice Returns true if nullifier has already been consumed
+     */
+    function isNullifierUsed(uint256 nullifierHash) external view returns (bool) {
+        return usedNullifiers[nullifierHash];
+    }
+
+    /**
+     * @notice Retrieve full execution request details
+     */
+    function getExecutionRequest(bytes32 requestId) external view returns (ExecutionRequest memory) {
+        return executionRequests[requestId];
+    }
+
     function recoverSigner(bytes32 messageHash, bytes memory sig) internal pure returns (address) {
         if (sig.length != 65) return address(0);
         bytes32 r;
