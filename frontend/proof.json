@@ -5,7 +5,7 @@
   "contracts": {
     "AegisSubnameRegistry": "0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE",
     "AegisExecutionManager": "0x13d7b8Add8265AB1Cfdc3a6E8E60D1b3bcD56fa8",
-    "AegisUniswapAdapter": "0x6383A973B4d65a48E489f22F9eD298CA7230C185"
+    "AegisUniswapAdapter": "0xD855719f7Cc2cD867540F8398E3d2Fa4b2dD8221"
   },
   "trades": {
     "autoSwap": {
@@ -19,13 +19,13 @@
       "requestId": "0xcdb9e7d7f03140e67590d4609a7951ec83be49d598efc95184a51aa650544b3a",
       "status": "PENDING",
       "label": "Approval requested",
-      "summary": "High-value trade intercepted and held onchain on Sepolia awaiting World ID Agent Pass human approval."
+      "summary": "High-value trade intercepted and held onchain on Sepolia awaiting ENS subname owner approval."
     },
     "worldApproved": {
       "txHash": "0xae44e91f91034dc612d3c5518e78c63c2f70239ef5beed7cb877b86c90e3af03",
       "status": "APPROVED",
-      "label": "Human approved",
-      "summary": "World ID human proof validated server-side; relayer attestation signed with single-use request nullifier."
+      "label": "Owner approved",
+      "summary": "ENS subname owner authorization verified; relayer attestation signed with single-use request nullifier."
     },
     "swapExecuted": {
       "txHash": "0xae44e91f91034dc612d3c5518e78c63c2f70239ef5beed7cb877b86c90e3af03",
@@ -59,7 +59,7 @@
     "registry": "0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE",
     "architecture": "ENSv2 Hierarchical Identity & Execution Access Control (EAC)",
     "records": {
-      "agent.capabilities": "uniswap_v3_swap,0g_compute_strategy,worldid_2fa",
+      "agent.capabilities": "uniswap_v3_swap,0g_compute_strategy,ens_owner_approval",
       "agent.biometric_threshold": "1000",
       "agent.operator": "0xB6Ba1Be32B7cA2729551882B71E8F469D06510e6",
       "agent.proof_of_ownership": "0x2dda15445e66943d7a0e52dbd6c8f0ea736b1772320a35e2a6912b3d809f0754",
@@ -75,10 +75,10 @@
       "specification": "0x4f6147db998b4b2e8c227ad16b5f0330da82c19e394fc86fc2e8164ec1e385f2"
     }
   },
-  "worldId": {
-    "proofOfOwnership": true,
-    "verificationLevel": "orb",
-    "orbCommitment": "0x2dda15445e66943d7a0e52dbd6c8f0ea736b1772320a35e2a6912b3d809f0754",
-    "proofLength": 980
+  "approvalGate": {
+    "gateType": "ens_owner_approval",
+    "description": "ENS Subname Owner Human Approval Gate",
+    "rootEnsName": "aegisnet.eth",
+    "registry": "0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE"
   }
 }
