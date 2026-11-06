@@ -137,7 +137,7 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   res.status(status).json({ success: false, error: status >= 500 && config.isProduction && !(err instanceof HttpError) ? 'Internal server error' : message });
 });
 
-app.listen(config.port, config.host, () => {
+const server = app.listen(config.port, config.host, () => {
   console.log(`=======================================================`);
   console.log(`🛡️  AegisNet listening on ${config.host}:${config.port} (${config.env})`);
   console.log(`🖥️  App:     http://localhost:${config.port}`);
@@ -149,3 +149,19 @@ app.listen(config.port, config.host, () => {
   runChecks();
   indexer.start();
 });
+
+// Graceful container shutdown (SIGTERM / SIGINT)
+const handleShutdown = (signal: string) => {
+  console.log(`\n[Server] Received ${signal}, closing HTTP server gracefully...`);
+  server.close(() => {
+    console.log('[Server] HTTP connections drained. Process terminating safely.');
+    process.exit(0);
+  });
+  setTimeout(() => {
+    console.error('[Server] Forced shutdown timeout reached. Exiting immediately.');
+    process.exit(1);
+  }, 10_000).unref();
+};
+
+process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+process.on('SIGINT', () => handleShutdown('SIGINT'));

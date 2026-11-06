@@ -4,7 +4,8 @@
 !**/.env.example
 backend/dist
 backend/data
-contracts
+contracts/*
+!contracts/deployment-config.json
 frontend-backup
 setup-keys.js
 *.log
