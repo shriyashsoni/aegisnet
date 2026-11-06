@@ -1,34 +1,34 @@
 {
   "network": "sepolia",
   "chainId": 11155111,
-  "timestamp": "2026-11-06T11:09:26.368Z",
+  "timestamp": "2026-11-06T19:43:26.704Z",
   "contracts": {
-    "AegisSubnameRegistry": "0x815893baD1708a201eEEAF226eeD576A7Ffea4BC",
-    "AegisExecutionManager": "0x8d5b392839300b487adDeeCc35F5BC534111CD33",
-    "AegisUniswapAdapter": "0xAaD03d978d84ccA70125F998b61ff7b539F565f4"
+    "AegisSubnameRegistry": "0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE",
+    "AegisExecutionManager": "0x13d7b8Add8265AB1Cfdc3a6E8E60D1b3bcD56fa8",
+    "AegisUniswapAdapter": "0x6383A973B4d65a48E489f22F9eD298CA7230C185"
   },
   "trades": {
     "autoSwap": {
-      "txHash": "0x79640a20abab184f469218c0774b4c809e1944f3fe6bcab771f21f42ffccb0dd",
+      "txHash": "0xed3be17f0cb7f8658970cec9171f6acf5b13597c90d222410a47f196f4b2f182",
       "status": "EXECUTED",
       "label": "Auto swap",
-      "summary": "Low-value trade ($0.30 USD) auto-executed atomically on Sepolia in a single transaction without human delay (< $1.00 threshold)."
+      "summary": "Low-value trade auto-executed atomically on Sepolia in a single transaction without human delay (< threshold)."
     },
     "approvalRequested": {
-      "txHash": "0xd530468647deee80ddb3a3a4836894aa1b08b4d28159eb313dfcc47ebda32f42",
-      "requestId": "0xd530468647deee80ddb3a3a4836894aa1b08b4d28159eb313dfcc47ebda32f42",
+      "txHash": "0x6d3d3b51b1bc411d64e2279ecea628e42d1b6574d72786dfa6040ad08cc51963",
+      "requestId": "0xcdb9e7d7f03140e67590d4609a7951ec83be49d598efc95184a51aa650544b3a",
       "status": "PENDING",
       "label": "Approval requested",
-      "summary": "High-value trade ($3.00 USD) intercepted and held onchain on Sepolia awaiting World ID Agent Pass human approval."
+      "summary": "High-value trade intercepted and held onchain on Sepolia awaiting World ID Agent Pass human approval."
     },
     "worldApproved": {
-      "txHash": "0x6d7a5084f3b842d5bf0280b9b38928429d4c9853966a3fb8fa722cf4679ca596",
+      "txHash": "0xae44e91f91034dc612d3c5518e78c63c2f70239ef5beed7cb877b86c90e3af03",
       "status": "APPROVED",
       "label": "Human approved",
       "summary": "World ID human proof validated server-side; relayer attestation signed with single-use request nullifier."
     },
     "swapExecuted": {
-      "txHash": "0x6d7a5084f3b842d5bf0280b9b38928429d4c9853966a3fb8fa722cf4679ca596",
+      "txHash": "0xae44e91f91034dc612d3c5518e78c63c2f70239ef5beed7cb877b86c90e3af03",
       "status": "SETTLED",
       "label": "Swap executed",
       "summary": "Atomic execution unlocked on Sepolia through AegisExecutionManager.approveWithRelayer into Uniswap V3."
@@ -54,4 +54,3 @@
     "docsUrl": "https://docs.0g.ai"
   }
 }
-

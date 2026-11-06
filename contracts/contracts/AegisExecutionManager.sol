@@ -92,17 +92,11 @@ contract AegisExecutionManager {
             "AegisManager: nullifier already bound to another owner"
         );
 
-        uint256 existingNullifier = ownerToNullifier[ownerAddress];
-        require(
-            existingNullifier == 0 || existingNullifier == nullifier,
-            "AegisManager: owner already bound to different nullifier"
-        );
-
-        if (existingNullifier == 0) {
+        if (ownerToNullifier[ownerAddress] == 0) {
             ownerToNullifier[ownerAddress] = nullifier;
-            nullifierToOwner[nullifier] = ownerAddress;
-            emit OwnerNullifierBound(ownerAddress, nullifier);
         }
+        nullifierToOwner[nullifier] = ownerAddress;
+        emit OwnerNullifierBound(ownerAddress, nullifier);
     }
 
     /**
@@ -114,6 +108,11 @@ contract AegisExecutionManager {
         require(
             msg.sender == ownerAddress || msg.sender == owner || msg.sender == relayerSigner,
             "AegisManager: unauthorized binding caller"
+        );
+        uint256 existingNullifier = ownerToNullifier[ownerAddress];
+        require(
+            existingNullifier == 0 || existingNullifier == nullifier,
+            "AegisManager: owner already bound to different nullifier"
         );
         _bindOwnerNullifier(ownerAddress, nullifier);
     }

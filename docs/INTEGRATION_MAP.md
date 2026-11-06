@@ -126,10 +126,10 @@ The table below reports read-only on-chain state queried directly from Sepolia R
 
 | Contract Name | Deployed Address | On-Chain Bytecode Size | Verified On-Chain Owner | Verified On-Chain Relayer / Router | Verified On-Chain Manager / Registry |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`AegisSubnameRegistry`** | [`0x815893baD1708a201eEEAF226eeD576A7Ffea4BC`](https://sepolia.etherscan.io/address/0x815893baD1708a201eEEAF226eeD576A7Ffea4BC) | 13,014 bytes | `0xB6Ba1Be32B7cA2729551882B71E8F469D06510e6` | N/A | `executionManager`: `0x8d5b392839300b487adDeeCc35F5BC534111CD33` |
-| **`AegisExecutionManager`** | [`0x8d5b392839300b487adDeeCc35F5BC534111CD33`](https://sepolia.etherscan.io/address/0x8d5b392839300b487adDeeCc35F5BC534111CD33) | 20,642 bytes | `0xB6Ba1Be32B7cA2729551882B71E8F469D06510e6` | `relayerSigner`: `0x3C29CC205E4fb3e1cA6C89DECDFE5A5d4e46E799` | `registry`: `0x815893baD1708a201eEEAF226eeD576A7Ffea4BC` |
-| **`AegisUniswapAdapter`** | [`0xAaD03d978d84ccA70125F998b61ff7b539F565f4`](https://sepolia.etherscan.io/address/0xAaD03d978d84ccA70125F998b61ff7b539F565f4) | 10,028 bytes | `0xB6Ba1Be32B7cA2729551882B71E8F469D06510e6` | `swapRouter`: `0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E` | `manager`: `0x8d5b392839300b487adDeeCc35F5BC534111CD33` |
-| **`AegisSwapVMAdapter`** | [`0xbd9e58d4a0e5987BC26f7898f9f66043bf9716C5`](https://sepolia.etherscan.io/address/0xbd9e58d4a0e5987BC26f7898f9f66043bf9716C5) | 5,236 bytes | N/A (immutable manager) | N/A | `manager`: `0x8d5b392839300b487adDeeCc35F5BC534111CD33` |
+| **`AegisSubnameRegistry`** | [`0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE`](https://sepolia.etherscan.io/address/0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE) | 13,014 bytes | `0xB6Ba1Be32B7cA2729551882B71E8F469D06510e6` | N/A | `executionManager`: `0x13d7b8Add8265AB1Cfdc3a6E8E60D1b3bcD56fa8` |
+| **`AegisExecutionManager`** | [`0x13d7b8Add8265AB1Cfdc3a6E8E60D1b3bcD56fa8`](https://sepolia.etherscan.io/address/0x13d7b8Add8265AB1Cfdc3a6E8E60D1b3bcD56fa8) | 20,642 bytes | `0xB6Ba1Be32B7cA2729551882B71E8F469D06510e6` | `relayerSigner`: `0x3C29CC205E4fb3e1cA6C89DECDFE5A5d4e46E799` | `registry`: `0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE` |
+| **`AegisUniswapAdapter`** | [`0x6383A973B4d65a48E489f22F9eD298CA7230C185`](https://sepolia.etherscan.io/address/0x6383A973B4d65a48E489f22F9eD298CA7230C185) | 10,028 bytes | `0xB6Ba1Be32B7cA2729551882B71E8F469D06510e6` | `swapRouter`: `0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E` | `manager`: `0x13d7b8Add8265AB1Cfdc3a6E8E60D1b3bcD56fa8` |
+| **`AegisSwapVMAdapter`** | [`0xb81b7Ec40eF275AA805Cb82D729498C47Ab64c60`](https://sepolia.etherscan.io/address/0xb81b7Ec40eF275AA805Cb82D729498C47Ab64c60) | 5,236 bytes | N/A (immutable manager) | N/A | `manager`: `0x13d7b8Add8265AB1Cfdc3a6E8E60D1b3bcD56fa8` |
 
 ### 2.2 Contract Specification & Access Control
 
@@ -256,7 +256,7 @@ An automated check between all configuration repositories confirms:
 
 ### 3.5 ENS / ENSIP-26 Subname Registry
 - **Plain Words:** Self-contained subname registry contract (`name.aegisnet.eth`) holding agent permissions, owner bindings, daily limits, and text records matching the ENSIP-26 specification (`agent.capabilities`, `agent.biometric_threshold`).
-- **Execution Target:** Ethereum Sepolia (`AegisSubnameRegistry.sol` at `0x815893baD1708a201eEEAF226eeD576A7Ffea4BC`).
+- **Execution Target:** Ethereum Sepolia (`AegisSubnameRegistry.sol` at `0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE`).
 - **Exact Code Locations:**
   - Contract: [`contracts/contracts/AegisSubnameRegistry.sol`](file:///c:/Users/Siddhu/Downloads/aegisnet/contracts/contracts/AegisSubnameRegistry.sol)
   - Backend Service: [`backend/src/services/ens.service.ts`](file:///c:/Users/Siddhu/Downloads/aegisnet/backend/src/services/ens.service.ts)
@@ -268,7 +268,7 @@ An automated check between all configuration repositories confirms:
 
 ### 3.6 1inch / SwapVM / Aqua [OUT OF SCOPE]
 - **Plain Words:** Prototype opcode router simulating 1inch SwapVM routing and Aqua liquidity positions using fixed mathematical percentage multipliers.
-- **Execution Target:** Sepolia test contract `AegisSwapVMAdapter.sol` (`0xbd9e58d4a0e5987BC26f7898f9f66043bf9716C5`).
+- **Execution Target:** Sepolia test contract `AegisSwapVMAdapter.sol` (`0xb81b7Ec40eF275AA805Cb82D729498C47Ab64c60`).
 - **Exact Code Locations:**
   - Prototype Contract: [`contracts/contracts/AegisSwapVMAdapter.sol`](file:///c:/Users/Siddhu/Downloads/aegisnet/contracts/contracts/AegisSwapVMAdapter.sol)
   - Scope Guard: [`contracts/contracts/AegisUniswapAdapter.sol#L150-L152`](file:///c:/Users/Siddhu/Downloads/aegisnet/contracts/contracts/AegisUniswapAdapter.sol#L150-L152)
@@ -499,10 +499,10 @@ graph TD
 
 | Component | Chain / Service | Real or Mock | Code / On-Chain Evidence | Identified Gap / Audit Note |
 | :--- | :--- | :--- | :--- | :--- |
-| **`AegisSubnameRegistry`** | Ethereum Sepolia (`11155111`) | **REAL** | [`AegisSubnameRegistry.sol`](file:///c:/Users/Siddhu/Downloads/aegisnet/contracts/contracts/AegisSubnameRegistry.sol), deployed at `0x815893baD1708a201eEEAF226eeD576A7Ffea4BC` | None; verified on-chain. |
-| **`AegisExecutionManager`** | Ethereum Sepolia (`11155111`) | **REAL** | [`AegisExecutionManager.sol`](file:///c:/Users/Siddhu/Downloads/aegisnet/contracts/contracts/AegisExecutionManager.sol), deployed at `0x8d5b392839300b487adDeeCc35F5BC534111CD33` | None; relayer decoupled on-chain (`0x3C29CC20...`). |
-| **`AegisUniswapAdapter`** | Ethereum Sepolia (`11155111`) | **REAL** | [`AegisUniswapAdapter.sol`](file:///c:/Users/Siddhu/Downloads/aegisnet/contracts/contracts/AegisUniswapAdapter.sol), deployed at `0xAaD03d978d84ccA70125F998b61ff7b539F565f4` | Routes to official SwapRouter02 (`0x3bFA4769...`). |
-| **`AegisSwapVMAdapter`** | Ethereum Sepolia (`11155111`) | **PROTOTYPE** | [`AegisSwapVMAdapter.sol`](file:///c:/Users/Siddhu/Downloads/aegisnet/contracts/contracts/AegisSwapVMAdapter.sol), deployed at `0xbd9e58d4a0e5987BC26f7898f9f66043bf9716C5` | Clearly labeled [OUT OF SCOPE]; not used for production swaps. |
+| **`AegisSubnameRegistry`** | Ethereum Sepolia (`11155111`) | **REAL** | [`AegisSubnameRegistry.sol`](file:///c:/Users/Siddhu/Downloads/aegisnet/contracts/contracts/AegisSubnameRegistry.sol), deployed at `0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE` | None; verified on-chain. |
+| **`AegisExecutionManager`** | Ethereum Sepolia (`11155111`) | **REAL** | [`AegisExecutionManager.sol`](file:///c:/Users/Siddhu/Downloads/aegisnet/contracts/contracts/AegisExecutionManager.sol), deployed at `0x13d7b8Add8265AB1Cfdc3a6E8E60D1b3bcD56fa8` | None; relayer decoupled on-chain (`0x3C29CC20...`). |
+| **`AegisUniswapAdapter`** | Ethereum Sepolia (`11155111`) | **REAL** | [`AegisUniswapAdapter.sol`](file:///c:/Users/Siddhu/Downloads/aegisnet/contracts/contracts/AegisUniswapAdapter.sol), deployed at `0x6383A973B4d65a48E489f22F9eD298CA7230C185` | Routes to official SwapRouter02 (`0x3bFA4769...`). |
+| **`AegisSwapVMAdapter`** | Ethereum Sepolia (`11155111`) | **PROTOTYPE** | [`AegisSwapVMAdapter.sol`](file:///c:/Users/Siddhu/Downloads/aegisnet/contracts/contracts/AegisSwapVMAdapter.sol), deployed at `0xb81b7Ec40eF275AA805Cb82D729498C47Ab64c60` | Clearly labeled [OUT OF SCOPE]; not used for production swaps. |
 | **World ID Agent Pass** | Off-chain (`auth.world.org`) | **REAL** | [`worldid.service.ts`](file:///c:/Users/Siddhu/Downloads/aegisnet/backend/src/services/worldid.service.ts#L45-L290), [`app.js#L305`](file:///c:/Users/Siddhu/Downloads/aegisnet/frontend/app.js#L305) | World ID Agent Pass proofs are mocked by World staging endpoints pending hardware rollout. |
 | **Uniswap V3 DEX** | Ethereum Sepolia (`11155111`) | **REAL** | SwapRouter02 `0x3bFA4769...`, Pool `0x6Ce0896e...` | Requires WETH/USDC testnet liquidity for live execution. |
 | **0G Private Compute** | 0G TEE Router (`router-api.0g.ai`) | **REAL** | [`zgCompute.service.ts`](file:///c:/Users/Siddhu/Downloads/aegisnet/backend/src/services/zgCompute.service.ts), model `0gm-1.0-35b-a3b` | Requires `ZG_COMPUTE_API_KEY` for live production queries (fails safe when unset). |

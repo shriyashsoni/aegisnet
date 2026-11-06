@@ -3,26 +3,26 @@
   "chainId": "11155111",
   "timestamp": "2026-11-06T11:16:27.550Z",
   "contracts": {
-    "AegisSubnameRegistry": "0x815893baD1708a201eEEAF226eeD576A7Ffea4BC",
-    "AegisExecutionManager": "0x8d5b392839300b487adDeeCc35F5BC534111CD33",
-    "AegisUniswapAdapter": "0xAaD03d978d84ccA70125F998b61ff7b539F565f4",
-    "AegisSwapVMAdapter": "0xbd9e58d4a0e5987BC26f7898f9f66043bf9716C5"
+    "AegisSubnameRegistry": "0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE",
+    "AegisExecutionManager": "0x13d7b8Add8265AB1Cfdc3a6E8E60D1b3bcD56fa8",
+    "AegisUniswapAdapter": "0x6383A973B4d65a48E489f22F9eD298CA7230C185",
+    "AegisSwapVMAdapter": "0xb81b7Ec40eF275AA805Cb82D729498C47Ab64c60"
   },
   "flows": {
     "lowValueAutoSwap": {
       "amountUSD": "0.30",
-      "thresholdUSD": "1.00",
-      "txHash": "0x79640a20abab184f469218c0774b4c809e1944f3fe6bcab771f21f42ffccb0dd",
-      "etherscan": "https://sepolia.etherscan.io/tx/0x79640a20abab184f469218c0774b4c809e1944f3fe6bcab771f21f42ffccb0dd",
+      "thresholdUSD": "1000.00",
+      "txHash": "0xed3be17f0cb7f8658970cec9171f6acf5b13597c90d222410a47f196f4b2f182",
+      "etherscan": "https://sepolia.etherscan.io/tx/0xed3be17f0cb7f8658970cec9171f6acf5b13597c90d222410a47f196f4b2f182",
       "status": "AUTO_EXECUTED"
     },
     "highValueApprovedSwap": {
-      "amountUSD": "3.00",
-      "thresholdUSD": "1.00",
-      "requestTx": "0xd530468647deee80ddb3a3a4836894aa1b08b4d28159eb313dfcc47ebda32f42",
-      "approveTx": "0x6d7a5084f3b842d5bf0280b9b38928429d4c9853966a3fb8fa722cf4679ca596",
-      "etherscan": "https://sepolia.etherscan.io/tx/0x6d7a5084f3b842d5bf0280b9b38928429d4c9853966a3fb8fa722cf4679ca596",
-      "nullifier": "91013010515072223684303406903413453891889260878856199096128299809585933499808",
+      "amountUSD": "2500.00",
+      "thresholdUSD": "1000.00",
+      "requestTx": "0x6d3d3b51b1bc411d64e2279ecea628e42d1b6574d72786dfa6040ad08cc51963",
+      "approveTx": "0xae44e91f91034dc612d3c5518e78c63c2f70239ef5beed7cb877b86c90e3af03",
+      "subsequentApproveTx": "0x63931cf1e91edb26eb05b53f9cef4b5eff803f566bdf77360573270a6ba71114",
+      "etherscan": "https://sepolia.etherscan.io/tx/0xae44e91f91034dc612d3c5518e78c63c2f70239ef5beed7cb877b86c90e3af03",
       "status": "WORLD_ID_APPROVED_AND_EXECUTED"
     },
     "deniedTradeCancelled": {

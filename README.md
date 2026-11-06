@@ -142,10 +142,10 @@ AegisNet separates autonomous agent operations from human-in-the-loop authorizat
 
 | Contract | Address | Role |
 | :--- | :--- | :--- |
-| **AegisSubnameRegistry** | [`0x815893baD1708a201eEEAF226eeD576A7Ffea4BC`](https://sepolia.etherscan.io/address/0x815893baD1708a201eEEAF226eeD576A7Ffea4BC) | Agent identities, owners, whitelists, limits, ENSIP-26 text records |
-| **AegisExecutionManager** | [`0x8d5b392839300b487adDeeCc35F5BC534111CD33`](https://sepolia.etherscan.io/address/0x8d5b392839300b487adDeeCc35F5BC534111CD33) | Request queue, Human Approval Gate, execution, cancellation |
-| **AegisUniswapAdapter** | [`0xAaD03d978d84ccA70125F998b61ff7b539F565f4`](https://sepolia.etherscan.io/address/0xAaD03d978d84ccA70125F998b61ff7b539F565f4) | Real Uniswap V3 onchain swap execution adapter (routes to official SwapRouter02 `0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E`) |
-| **AegisSwapVMAdapter** | [`0xbd9e58d4a0e5987BC26f7898f9f66043bf9716C5`](https://sepolia.etherscan.io/address/0xbd9e58d4a0e5987BC26f7898f9f66043bf9716C5) | 1inch SwapVM opcode router [OUT OF SCOPE] |
+| **AegisSubnameRegistry** | [`0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE`](https://sepolia.etherscan.io/address/0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE) | Agent identities, owners, whitelists, limits, ENSIP-26 text records |
+| **AegisExecutionManager** | [`0x13d7b8Add8265AB1Cfdc3a6E8E60D1b3bcD56fa8`](https://sepolia.etherscan.io/address/0x13d7b8Add8265AB1Cfdc3a6E8E60D1b3bcD56fa8) | Request queue, Human Approval Gate, execution, cancellation |
+| **AegisUniswapAdapter** | [`0x6383A973B4d65a48E489f22F9eD298CA7230C185`](https://sepolia.etherscan.io/address/0x6383A973B4d65a48E489f22F9eD298CA7230C185) | Real Uniswap V3 onchain swap execution adapter (routes to official SwapRouter02 `0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E`) |
+| **AegisSwapVMAdapter** | [`0xb81b7Ec40eF275AA805Cb82D729498C47Ab64c60`](https://sepolia.etherscan.io/address/0xb81b7Ec40eF275AA805Cb82D729498C47Ab64c60) | 1inch SwapVM opcode router [OUT OF SCOPE] |
 
 - **Deployer & protocol owner:** [`0xB6Ba1Be32B7cA2729551882B71E8F469D06510e6`](https://sepolia.etherscan.io/address/0xB6Ba1Be32B7cA2729551882B71E8F469D06510e6)
 - **Relayer signer (Human Approval Gate):** [`0x3C29CC205E4fb3e1cA6C89DECDFE5A5d4e46E799`](https://sepolia.etherscan.io/address/0x3C29CC205E4fb3e1cA6C89DECDFE5A5d4e46E799) (Decoupled from owner key; onchain verified via `AegisExecutionManager.relayerSigner`)
@@ -183,9 +183,9 @@ AegisNet integrates **0G (Zero Gravity)** across the agent execution lifecycle:
   * After each planned or executed trade, a canonical decision record (agent, plan, risk checks, approval status, tx hash, 0G request ID) is formatted and published to 0G Storage via `@0gfoundation/0g-storage-ts-sdk`.
   * Computes an immutable Merkle tree and commits the root hash to 0G Galileo Testnet via the onchain Flow contract (`0x22e03a6a89b950f1c82ec5e74f8eca321a105296`).
   * Live verified proof:
-    * **0G Request ID:** `b9fed9317fd4977c`
-    * **0G Storage Merkle Root:** [`0xc9d5549ae5460e519da8ecf0c4a3ef9e954130f20ab26fb101d88969563a213d`](https://storagescan.0g.ai/file/0xc9d5549ae5460e519da8ecf0c4a3ef9e954130f20ab26fb101d88969563a213d)
-    * **0G Flow Tx Hash:** `0x3d15ad53186ba14cbe29947be4718a915aeabecaaa2baf3018579da7c4c09f5a`
+    * **0G Request ID:** `96dd6e96b50e7a51, cf6816dc-4e89-4ee9-8c92-2cb5029e19a3`
+    * **0G Storage Merkle Root:** [`0x2db31958eeef10e3d1969a7828703bbd56b3fa8734646015ccf5c9fe2c991c02`](https://storagescan.0g.ai/file/0x2db31958eeef10e3d1969a7828703bbd56b3fa8734646015ccf5c9fe2c991c02)
+    * **0G Flow Tx Hash:** `0xdf2add56cf1f74595f31db146d411dc358f9270102f403c8e35f54f1dc86bdcf`
   * Reproducible script: `node --experimental-strip-types scripts/prove-0g.ts`. Full report in [`docs/0G.md`](docs/0G.md).
 
 ### 🛡️ Human Approval Gate: Cryptographic Human-in-the-Loop Clearance
@@ -248,11 +248,12 @@ To run real swaps on Ethereum Sepolia or test with live tokens:
 ### 1inch: SwapVM & Aqua (OUT OF SCOPE Prototype)
 * **Notice:** The 1inch SwapVM/Aqua opcode layer in [`AegisSwapVMAdapter.sol`](contracts/contracts/AegisSwapVMAdapter.sol) was an experimental concept prototype and is officially **OUT OF SCOPE**. AegisNet does not claim a live 1inch integration. Real on-chain DEX trades and token movements are executed through Uniswap V3 via [`AegisUniswapAdapter.sol`](contracts/contracts/AegisUniswapAdapter.sol).
 
-### Anthropic: Claude strategy planner
-- `POST /api/agent/propose` asks Claude for a structured plan: strategy type, token pair, Uniswap hop, a plain-English summary, rationale and risk notes. Claude sees the agent's real threshold and remaining daily limit.
-- It uses **structured outputs**, adaptive thinking and server-side refusal fallbacks. The model is `claude-opus-5` by default and can be changed with `CLAUDE_MODEL`.
-- **Safety:** the model only chooses from a fixed set of options. Calldata is always built by deterministic code, and the contract enforces limits no matter what the plan says.
-- Without `ANTHROPIC_API_KEY`, a deterministic rule-based planner is used instead.
+### 🤖 0G Private Compute Strategy Planner
+- `POST /api/agent/propose` passes the operator's goal to **0G Private Compute** (`0gm-1.0-35b-a3b`), running inside a TEE-attested decentralized compute router (`https://router-api.0g.ai/v1`).
+- The model produces a structured plan: strategy type, token pair, execution rationale, and risk notes based on the agent's real onchain spending limits.
+- Every plan generates a verifiable **0G Request ID** and publishes an immutable decision record to **0G Storage**.
+- **Safety:** The model never builds arbitrary transactions. Calldata is generated by deterministic TypeScript SDK code and executed through `AegisUniswapAdapter` on Sepolia.
+- Optional fallback: Claude or deterministic rule-based planner when configured.
 
 ---
 
@@ -262,15 +263,14 @@ To run real swaps on Ethereum Sepolia or test with live tokens:
 ┌──────────────────────────── Browser ─────────────────────────────┐
 │  Landing page · Console · Docs                                   │
 │  Wallet (EIP-6963, any extension)    Human Approval Gate Modal   │
-│                                       (World ID / Operator 2FA)  │
+│                                       (World ID Agent Pass)      │
 └───────────┬───────────────────────────────────────┬──────────────┘
             │ signs EVM actions                     │ Human attestation
             ▼                                       ▼
 ┌──────────────────────── Ethereum Sepolia ───────┐ ┌──────── Backend (Node/Express) ─────────┐
-│ AegisSubnameRegistry   identity · limits        │ │ Claude planner   plan → calldata        │
-│ AegisExecutionManager  queue · gate · execute   │◄┤ Approval Gateway verify → attestation   │
-│ AegisSwapVMAdapter     1inch SwapVM opcodes     │ │ Chain indexer    events → activity      │
-│ AegisUniswapAdapter    Uniswap V3 SwapRouter02  │►┤ Serves the web app + vendored libs      │
+│ AegisSubnameRegistry   identity · limits        │ │ 0G Compute       TEE AI planner          │
+│ AegisExecutionManager  queue · gate · execute   │◄┤ 0G Storage       Merkle audit records    │
+│ AegisUniswapAdapter    Uniswap V3 SwapRouter02  │►┤ Approval Gateway World ID attestation    │
 └─────────────────────────────────────────────────┘ └─────────────────────────────────────────┘
 ```
 
@@ -278,7 +278,7 @@ To run real swaps on Ethereum Sepolia or test with live tokens:
 
 - **Users sign, the server doesn't.** Registering, changing limits, trading, approving and cancelling are all signed by the user's own wallet. The backend never holds user keys and never pays for user actions.
 - **Deterministic security.** The Human Approval Gate ensures high-stakes decisions require explicit human authorization before execution.
-- **AI proposes, code decides.** Claude's output is restricted to a schema. Transactions are built deterministically and enforced onchain.
+- **AI proposes, code decides.** 0G Private Compute output is strictly validated against a schema. Transactions are built deterministically and enforced onchain.
 - **The chain is the source of truth.** Activity and agent lists come from contract events, not a private database.
 
 ---
@@ -286,14 +286,13 @@ To run real swaps on Ethereum Sepolia or test with live tokens:
 ## 🔄 How a trade flows
 
 ```
-1. Plan      POST /api/agent/propose           → Claude plan + encoded SwapVM calldata
+1. Plan      POST /api/agent/propose           → 0G Compute plan + 0G Storage record
 2. Submit    agent wallet → requestExecution(adapter, calldata, valueUSD)
                ├─ under the threshold → executes in the same transaction ✅
                └─ at or above        → ExecutionRequested(requiresBiometrics = true) ⏸
-3. Gate      owner opens Human Approval Gate modal (World ID / Operator sign-off)
+3. Gate      owner opens Human Approval Gate modal (World ID Agent Pass)
              POST /api/worldid/attest          → relayer signature + single-use nullifier
-4. Approve   owner wallet → approveWithRelayer(requestId, nullifier, signature)
-5. Execute   owner wallet → executeVerifiedTransaction(requestId)   ✅
+4. Approve   owner wallet → approveWithRelayer(requestId, nullifier, deadline, sig)  ✅
    or Cancel owner/agent wallet → cancelExecution(requestId)        ❌ funds never move
 ```
 
@@ -302,7 +301,7 @@ To run real swaps on Ethereum Sepolia or test with live tokens:
 | Register an agent (+ whitelist execution adapters) | Owner wallet | `registerSubname`, `setTargetContractWhitelist` |
 | Change threshold, whitelist, text records, revoke | Owner wallet | `updateBiometricThreshold`, `setTargetContractWhitelist`, `setTextRecord`, `revokeSubname` |
 | Submit a trade | Agent wallet | `requestExecution` |
-| Approve a paused trade | Owner's approval modal + wallet | `/api/worldid/attest` → `approveWithRelayer` → `executeVerifiedTransaction` |
+| Approve a paused trade | Owner's approval modal + wallet | `/api/worldid/attest` → `approveWithRelayer` (approves & executes atomically) |
 | Cancel a trade | Owner or agent wallet | `cancelExecution` |
 
 ---

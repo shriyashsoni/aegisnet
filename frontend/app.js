@@ -601,7 +601,7 @@
       .then(function () { busy(btn, false); });
   });
 
-  var ADAPTER_UNISWAP = '0xAaD03d978d84ccA70125F998b61ff7b539F565f4';
+  var ADAPTER_UNISWAP = (state.health && state.health.contracts && state.health.contracts.AegisUniswapAdapter) || '0x6383A973B4d65a48E489f22F9eD298CA7230C185';
 
   var btnQuickWl = $('#btn-quick-whitelist');
   if (btnQuickWl) {

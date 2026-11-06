@@ -5,10 +5,10 @@
   "deployer": "0xB6Ba1Be32B7cA2729551882B71E8F469D06510e6",
   "relayer": "0x3C29CC205E4fb3e1cA6C89DECDFE5A5d4e46E799",
   "contracts": {
-    "AegisSubnameRegistry": "0x815893baD1708a201eEEAF226eeD576A7Ffea4BC",
-    "AegisExecutionManager": "0x8d5b392839300b487adDeeCc35F5BC534111CD33",
-    "AegisUniswapAdapter": "0xAaD03d978d84ccA70125F998b61ff7b539F565f4",
-    "AegisSwapVMAdapter": "0xbd9e58d4a0e5987BC26f7898f9f66043bf9716C5"
+    "AegisSubnameRegistry": "0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE",
+    "AegisExecutionManager": "0x13d7b8Add8265AB1Cfdc3a6E8E60D1b3bcD56fa8",
+    "AegisUniswapAdapter": "0x6383A973B4d65a48E489f22F9eD298CA7230C185",
+    "AegisSwapVMAdapter": "0xb81b7Ec40eF275AA805Cb82D729498C47Ab64c60"
   },
-  "timestamp": "2026-11-06T11:09:26.368Z"
+  "timestamp": "2026-11-06T19:41:02.545Z"
 }
