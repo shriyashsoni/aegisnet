@@ -468,29 +468,35 @@
       </svg>
     </div>
     <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:4px;">
-      <span class="status-pill s-ok" style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;border-color:#a855f7;color:#d8b4fe">Human-in-the-Loop 2FA</span>
+      <span class="status-pill s-ok" style="font-size:11px;text-transform:uppercase;letter-spacing:0.05em;border-color:#a855f7;color:#d8b4fe">World ID Agent Pass 2FA</span>
     </div>
-    <h2 id="wid-title">Approve with Human Approval Gate</h2>
+    <h2 id="wid-title">World ID Agent Pass Human Approval Gate</h2>
     <p class="modal-prompt" id="wid-prompt"></p>
+
+    <div id="wid-status-banner" hidden style="margin: 10px 0; padding: 10px 14px; border-radius: 8px; font-weight: 500; font-size: 13px; text-align: center;"></div>
     
     <div class="zk-circuit-box" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 14px;margin:12px 0;font-size:12px;text-align:left;">
       <div style="display:flex;justify-content:space-between;color:#a1a1aa;margin-bottom:4px;">
-        <span>Security Check:</span><code style="color:#c084fc">World ID Proof-of-Humanity</code>
+        <span>Security Check:</span><code style="color:#c084fc">World ID Agent Pass Checkpoint</code>
       </div>
       <div style="display:flex;justify-content:space-between;color:#a1a1aa;margin-bottom:4px;">
-        <span>Verification Mode:</span><span id="wid-mode-badge" style="color:#4ade80">● World ID 2FA Gate</span>
+        <span>Verification Mode:</span><span id="wid-mode-badge" style="color:#4ade80">● World ID Agent Pass</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;color:#a1a1aa;margin-bottom:4px;">
+        <span>Window Expiry:</span><span id="wid-expiry-badge" style="color:#fbbf24">15m countdown</span>
       </div>
       <div style="display:flex;justify-content:space-between;color:#a1a1aa;">
-        <span>Execution Layer:</span><span style="color:#38bdf8">● Ethereum Sepolia Settlement</span>
+        <span>Settlement Layer:</span><span style="color:#38bdf8">● Ethereum Sepolia Settlement</span>
       </div>
     </div>
 
     <dl class="kv" id="wid-meta"></dl>
     <ol class="tx-steps" id="wid-steps" hidden></ol>
     <p class="hint" id="wid-hint"></p>
-    <div class="modal-actions">
-      <button class="btn btn-solid" type="button" id="wid-verify" style="background:#7e22ce;border-color:#a855f7;">Verify with World ID &amp; Authorize</button>
-      <button class="btn btn-ghost" type="button" id="wid-cancel">Cancel this trade</button>
+    <div class="modal-actions" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+      <button class="btn btn-solid" type="button" id="wid-verify" style="background:#7e22ce;border-color:#a855f7;">Verify Human with Agent Pass</button>
+      <button class="btn btn-ghost" type="button" id="wid-deny" style="border-color:#ef4444;color:#ef4444;">Deny Trade</button>
+      <button class="btn btn-ghost" type="button" id="wid-cancel">Cancel on-chain</button>
     </div>
     <button class="modal-x" type="button" data-close aria-label="Close">×</button>
   </div>
@@ -507,7 +513,6 @@
 </datalist>
 
 <script src="/vendor/ethers.umd.min.js"></script>
-<script src="/vendor/idkit.js"></script>
 <script src="wallet.js"></script>
 <script src="chain.js"></script>
 <script src="app.js"></script>

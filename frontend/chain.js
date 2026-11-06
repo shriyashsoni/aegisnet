@@ -155,14 +155,22 @@
     };
   }
 
-  async function submitApproval(requestId, nullifierHash, signature, onStatus) {
+  async function submitApproval(requestId, nullifierHash, deadlineOrSig, maybeSig, onStatus) {
     var manager = contract('manager', await signer());
+    var hasDeadline = maybeSig !== undefined && typeof deadlineOrSig !== 'function';
+    var deadline = hasDeadline ? deadlineOrSig : null;
+    var signature = hasDeadline ? maybeSig : deadlineOrSig;
+    var statusCb = hasDeadline ? onStatus : maybeSig;
+
     return send('Record Human Approval', function () {
+      if (deadline && typeof manager['approveWithRelayer(bytes32,uint256,uint256,bytes)'] === 'function') {
+        return manager['approveWithRelayer(bytes32,uint256,uint256,bytes)'](requestId, BigInt(nullifierHash), BigInt(deadline), signature);
+      }
       if (typeof manager.approveWithRelayer === 'function') {
         return manager.approveWithRelayer(requestId, BigInt(nullifierHash), signature);
       }
       return manager.verifyBiometricsWithRelayer(requestId, BigInt(nullifierHash), signature);
-    }, onStatus);
+    }, statusCb);
   }
 
   async function executeVerified(requestId, onStatus) {

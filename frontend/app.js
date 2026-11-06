@@ -783,40 +783,111 @@
 
   // ---------------------------------------------------------------------------
   // ---------------------------------------------------------------------------
-  // Human Approval Gate & World ID 2FA
+  // Human Approval Gate & World ID Agent Pass 2FA
   // ---------------------------------------------------------------------------
   var modal = $('#worldid-modal');
+  var approvalTimer = null;
+
+  function renderApprovalBanner(status, message) {
+    var banner = $('#wid-status-banner');
+    if (!banner) return;
+    if (!status) {
+      banner.hidden = true;
+      banner.innerHTML = '';
+      return;
+    }
+    banner.hidden = false;
+    if (status === 'denied') {
+      banner.style.background = 'rgba(239, 68, 68, 0.12)';
+      banner.style.color = '#f87171';
+      banner.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+      banner.innerHTML = '<strong>DENIED:</strong> ' + esc(message || 'Trade denied by human approver. Autonomous agent blocked from moving funds.');
+    } else if (status === 'expired') {
+      banner.style.background = 'rgba(245, 158, 11, 0.12)';
+      banner.style.color = '#fbbf24';
+      banner.style.border = '1px solid rgba(245, 158, 11, 0.3)';
+      banner.innerHTML = '<strong>EXPIRED:</strong> ' + esc(message || '15-minute approval window elapsed. Trade is permanently blocked from execution.');
+    } else if (status === 'cancelled') {
+      banner.style.background = 'rgba(161, 161, 170, 0.12)';
+      banner.style.color = '#d4d4d8';
+      banner.style.border = '1px solid rgba(161, 161, 170, 0.3)';
+      banner.innerHTML = '<strong>CANCELLED:</strong> ' + esc(message || 'Execution request cancelled on-chain.');
+    } else if (status === 'approved') {
+      banner.style.background = 'rgba(34, 197, 94, 0.12)';
+      banner.style.color = '#4ade80';
+      banner.style.border = '1px solid rgba(34, 197, 94, 0.3)';
+      banner.innerHTML = '<strong>APPROVED:</strong> ' + esc(message || 'Human verified via World ID Agent Pass. Trade executed on Sepolia.');
+    }
+  }
 
   function openApproval(req) {
     state.approval = req;
+    renderApprovalBanner(null);
+    if (approvalTimer) clearInterval(approvalTimer);
+
     var wid = state.worldId || {};
     var mode = wid.mode || 'cloud';
-    var level = wid.verificationLevel || 'device';
 
     if ($('#wid-mode-badge')) {
-      $('#wid-mode-badge').textContent = mode === 'dev'
-        ? '● Dev Mode (Simulated Proof)'
-        : '● World ID (' + level.toUpperCase() + ' Level)';
+      $('#wid-mode-badge').textContent = '● World ID Agent Pass (Human Checkpoint)';
     }
 
     $('#wid-prompt').textContent = 'A ' + usd(req.valueUSD) + ' trade by ' + (req.agentSubname || short(req.agentAddress)) +
-      ' is paused onchain. Authorize it via the Human Approval Gate to approve.';
+      ' is paused onchain. Authorize it via World ID Agent Pass to approve.';
     $('#wid-meta').innerHTML =
       '<dt>Request</dt><dd class="mono">' + esc(short(req.requestId, 12, 6)) + '</dd>' +
       '<dt>Trade Value</dt><dd>' + usd(req.valueUSD) + '</dd>' +
       '<dt>Agent</dt><dd>' + esc(req.agentSubname || short(req.agentAddress)) + '</dd>' +
-      '<dt>Security Gate</dt><dd class="mono" style="color:#4ade80">' + (mode === 'dev' ? 'Local Relayer Attestation' : 'World ID Proof-of-Humanity') + '</dd>';
+      '<dt>Security Gate</dt><dd class="mono" style="color:#c084fc">World ID Agent Pass (OIDC Human Checkpoint)</dd>';
     $('#wid-steps').hidden = true;
     $('#wid-steps').innerHTML = '';
-    $('#wid-verify').textContent = mode === 'dev' ? 'Authorize Execution (Dev Mode)' : 'Verify with World ID';
-    $('#wid-hint').innerHTML = mode === 'dev'
-      ? 'Generates an authorization attestation via the local relayer and unlocks execution on Sepolia.'
-      : 'Triggers World ID verification (Orb or Device) to issue a single-use nullifier attestation on Sepolia.';
+    $('#wid-verify').textContent = 'Verify Human with Agent Pass';
+    $('#wid-hint').innerHTML = 'Verifies proof of humanity server-side per auth.world.org guidelines and signs relayer attestation over (requestId, nullifier, deadline).';
     $('#wid-verify').disabled = false;
+    if ($('#wid-deny')) $('#wid-deny').disabled = false;
     $('#wid-cancel').disabled = false;
     modal.hidden = false;
+
+    // Create Agent Pass session on backend
+    api('/api/worldid/session', {
+      method: 'POST',
+      body: { requestId: req.requestId }
+    }).then(function (session) {
+      state.approvalSession = session;
+      var deadline = session.deadline || (Math.floor(Date.now() / 1000) + 900);
+
+      var updateCountdown = function () {
+        var now = Math.floor(Date.now() / 1000);
+        var left = deadline - now;
+        if ($('#wid-expiry-badge')) {
+          if (left <= 0) {
+            $('#wid-expiry-badge').textContent = 'EXPIRED';
+            $('#wid-expiry-badge').style.color = '#ef4444';
+            renderApprovalBanner('expired');
+            $('#wid-verify').disabled = true;
+            if ($('#wid-deny')) $('#wid-deny').disabled = true;
+            clearInterval(approvalTimer);
+          } else {
+            var m = Math.floor(left / 60);
+            var s = left % 60;
+            $('#wid-expiry-badge').textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+          }
+        }
+      };
+      updateCountdown();
+      approvalTimer = setInterval(updateCountdown, 1000);
+    }).catch(function (err) {
+      console.warn('Could not initialize Agent Pass session:', err);
+    });
   }
-  function closeApproval() { modal.hidden = true; }
+
+  function closeApproval() {
+    modal.hidden = true;
+    if (approvalTimer) {
+      clearInterval(approvalTimer);
+      approvalTimer = null;
+    }
+  }
   $$('[data-close]', modal).forEach(function (el) { el.addEventListener('click', closeApproval); });
 
   function attest(requestId, result) {
@@ -833,31 +904,32 @@
     });
   }
 
-  /** Attestation → wallet records approval → wallet executes */
+  /** Attestation → wallet records approval & executes trade */
   function finishApproval(req, att) {
     var track = txTracker($('#wid-steps'));
     $('#wid-verify').disabled = true;
+    if ($('#wid-deny')) $('#wid-deny').disabled = true;
     $('#wid-cancel').disabled = true;
     setStep('gate', 'active');
-    return Chain.submitApproval(req.requestId, att.nullifierHash, att.signature, track).then(function () {
+
+    return Chain.submitApproval(req.requestId, att.nullifierHash, att.deadline, att.signature, track).then(function (receipt) {
       setStep('gate', 'done');
-      setStep('execute', 'active');
-      return Chain.executeVerified(req.requestId, track);
-    }).then(function (receipt) {
       setStep('execute', 'done');
       setExecState('EXECUTED');
-      toast('Approved via Human Approval Gate and executed on Sepolia', 'ok');
-      showExecResult('Approved via Human Approval Gate and executed onchain', [
+      renderApprovalBanner('approved', 'World ID Agent Pass attestation accepted on Sepolia. Trade executed.');
+      toast('Approved via World ID Agent Pass and executed on Sepolia', 'ok');
+      showExecResult('Approved via World ID Agent Pass and executed onchain', [
         ['Request', '<span class="mono">' + esc(short(req.requestId, 12, 6)) + '</span>'],
         ['Value', usd(req.valueUSD)],
         ['Execution tx', txLink(receipt.hash)],
       ]);
-      setTimeout(closeApproval, 1200);
+      setTimeout(closeApproval, 2500);
       return afterTx();
     }).catch(function (err) {
       failActive(err.message);
       toast(err.message, 'err');
       $('#wid-verify').disabled = false;
+      if ($('#wid-deny')) $('#wid-deny').disabled = false;
       $('#wid-cancel').disabled = false;
       return afterTx();
     });
@@ -868,46 +940,75 @@
     if (!req) return;
     try { requireWallet(); } catch (err) { return toast(err.message, 'err'); }
     var btn = this;
-    var wid = state.worldId || {};
+    var session = state.approvalSession;
 
-    if (window.IDKit && wid.appId && wid.mode !== 'dev') {
-      try {
-        busy(btn, true, 'Opening World ID…');
-        IDKit.init({
-          app_id: wid.appId,
-          action: wid.action || 'agent-high-value-auth',
-          signal: req.requestId,
-          verification_level: wid.verificationLevel || 'device',
-          handleVerify: function (result) {
-            return attest(req.requestId, result);
-          },
-          onSuccess: function (result) {
-            busy(btn, false);
-            toast('World ID proof verified', 'ok');
-            finishApproval(req, result);
-          },
-          onError: function (err) {
-            busy(btn, false);
-            toast('World ID verification error: ' + (err.message || err), 'err');
-          }
-        });
-        IDKit.open();
-        return;
-      } catch (idkErr) {
-        console.warn('IDKit standalone open error, falling back to direct relayer attestation:', idkErr);
-      }
+    busy(btn, true, 'Verifying Agent Pass…');
+
+    if (session && session.sessionId) {
+      api('/api/worldid/verify', {
+        method: 'POST',
+        body: { sessionId: session.sessionId }
+      }).then(function (att) {
+        busy(btn, false);
+        toast('World ID Agent Pass verified', 'ok');
+        return finishApproval(req, att);
+      }).catch(function (err) {
+        busy(btn, false);
+        toast(err.message, 'err');
+      });
+    } else {
+      attest(req.requestId, {}).then(function (att) {
+        busy(btn, false);
+        toast('Human approval attested', 'ok');
+        return finishApproval(req, att);
+      }).catch(function (err) {
+        busy(btn, false);
+        toast(err.message, 'err');
+      });
     }
-
-    busy(btn, true, 'Authorizing…');
-    attest(req.requestId, {}).then(function (att) {
-      busy(btn, false);
-      toast('Human approval attested', 'ok');
-      return finishApproval(req, att);
-    }).catch(function (err) {
-      busy(btn, false);
-      toast(err.message, 'err');
-    });
   });
+
+  if ($('#wid-deny')) {
+    $('#wid-deny').addEventListener('click', function () {
+      var req = state.approval;
+      if (!req) return;
+      var btn = this;
+      var session = state.approvalSession;
+
+      if (session && session.sessionId) {
+        busy(btn, true, 'Denying…');
+        api('/api/worldid/deny', {
+          method: 'POST',
+          body: { sessionId: session.sessionId, reason: 'Human operator denied high-value trade proposal' }
+        }).then(function () {
+          busy(btn, false);
+          renderApprovalBanner('denied');
+          $('#wid-verify').disabled = true;
+          $('#wid-deny').disabled = true;
+          setStep('gate', 'fail');
+          setStep('execute', 'skip');
+          setExecState('DENIED');
+          toast('Trade explicitly denied by human approver. Agent blocked.', 'warn');
+          showExecResult('Trade Denied by Human Approver. Protected action did NOT occur.', [
+            ['Request', '<span class="mono">' + esc(short(req.requestId, 12, 6)) + '</span>'],
+            ['Status', '<span style="color:#ef4444;font-weight:bold;">DENIED</span>'],
+            ['Outcome', 'Funds remain 100% untouched. Autonomous agent blocked.'],
+          ], 'err');
+        }).catch(function (err) {
+          busy(btn, false);
+          toast(err.message, 'err');
+        });
+      } else {
+        renderApprovalBanner('denied');
+        $('#wid-verify').disabled = true;
+        $('#wid-deny').disabled = true;
+        setStep('gate', 'fail');
+        setStep('execute', 'skip');
+        setExecState('DENIED');
+        toast('Trade denied. Agent blocked.', 'warn');
+      }
+    });
+  }
 
   function cancelTrade(requestId, btn) {
     try { requireWallet(); } catch (err) { return toast(err.message, 'err'); }
@@ -915,11 +1016,12 @@
     return Chain.cancel(requestId).then(function (receipt) {
       toast('Trade cancelled onchain', 'ok');
       if (state.approval && state.approval.requestId === requestId) {
+        renderApprovalBanner('cancelled');
         setStep('gate', 'fail');
         setStep('execute', 'skip');
         setExecState('CANCELLED');
         showExecResult('Cancelled by the owner. The funds never moved.', [['Cancel tx', txLink(receipt.hash)]], 'err');
-        closeApproval();
+        setTimeout(closeApproval, 2000);
       }
       return afterTx();
     }).catch(function (err) {
