@@ -289,12 +289,23 @@ Backend (Node/Express, one container)
         <div class="api-endpoint"><span class="badge-method badge-post">POST</span> /api/worldid/attest</div>
         <p>Verifies the human approval credential / World ID proof, checks bounds, commits the single-use nullifier, and returns the attestation for <code>approveWithRelayer</code>. Rate limited.</p>
         <div class="code-block">
-// Request
-{ "requestId": "0x…", "nullifierHash": "4417…" }
+// Request (from IDKit standalone widget)
+{
+  "requestId": "0x…",
+  "nullifier_hash": "0x…",
+  "proof": "0x…",
+  "merkle_root": "0x…",
+  "verification_level": "orb"
+}
 
 // Response
-{ "nullifierHash": "4417…", "signature": "0x…", "owner": "0x…", "proofMode": "world-id-v2" }
+{ "nullifierHash": "4417…", "signature": "0x…", "owner": "0x…", "verifyMode": "cloud" }
         </div>
+      </div>
+
+      <div class="api-card">
+        <div class="api-endpoint"><span class="badge-method badge-get">GET</span> /api/worldid/config · /api/worldid/binding/:owner</div>
+        <p>Returns public IDKit parameters (<code>appId</code>, <code>action</code>, <code>verificationLevel</code>, <code>mode</code>) and retrieves the unique human nullifier bound to an agent owner.</p>
       </div>
 
       <div class="api-card" id="api-exec">

@@ -332,11 +332,12 @@ Open **http://localhost:4000**:
 4. **Trade → $2,500.** It pauses onchain; click **Authorize** in the Human Approval Gate modal to sign the approval and unlock execution.
 5. **Start & cancel** a trade to verify the onchain kill switch.
 
-### Deploy your own contracts (optional)
+### Deploy and verify your own contracts (optional)
 ```bash
 cd contracts
-# contracts/.env: SEPOLIA_RPC_URL, PRIVATE_KEY, ENS_ROOT_NAME
+# contracts/.env: SEPOLIA_RPC_URL, PRIVATE_KEY, ENS_ROOT_NAME, ETHERSCAN_API_KEY
 npm run deploy:sepolia      # writes deployment-config.json and backend/src/config/contracts.json
+npm run verify:sepolia      # automates verification for all 4 contracts on Etherscan
 ```
 
 ---
@@ -484,13 +485,19 @@ function beforeSwap(address sender, bytes32 poolId, uint256 amountUSD) returns (
 
 ## 🧪 Testing
 
-**1. Hardhat EVM Unit Tests (9 passing):**
+**1. Hardhat EVM Unit Tests (11 passing):**
 ```bash
 cd contracts && npm test
 ```
-Covers subname registration, whitelists, threshold flagging, ENSIP-26 text records, auto-execution under the threshold, Human Approval Gate relayer verification (`approveWithRelayer`), backward-compatible `verifyBiometricsWithRelayer`, gated Uniswap v4 swaps, and 1inch Aqua deposit/rebalance.
+Covers subname registration, whitelists, threshold flagging, ENSIP-26 text records, auto-execution under the threshold, Human Approval Gate relayer verification (`approveWithRelayer`), status query helpers (`isRequestPending`, `isRequestReadyForExecution`, `isNullifierUsed`), signature tampering defense, backward-compatible `verifyBiometricsWithRelayer`, gated Uniswap v4 swaps, and 1inch Aqua deposit/rebalance.
 
-**2. Full user-flow test** ([`backend/test/e2e.local.js`](backend/test/e2e.local.js), 19 checks). A user wallet does exactly what the browser does, against a local chain:
+**2. Backend Unit Tests (5 suites passing):**
+```bash
+cd backend && npm test
+```
+Validates input sanitization, signal hashing to field elements (`keccak256(x) >> 8`), uint256 bounds, USD-to-Wei 18-decimal fixed-point conversions, and relayer attestation digests.
+
+**3. Full user-flow test** ([`backend/test/e2e.local.js`](backend/test/e2e.local.js), 19 checks). A user wallet does exactly what the browser does, against a local chain:
 - register → AI plan → $250 auto-execution → $2,500 pause → approval attestation → approve → execute
 - the same human approves a second request; a different human/key is refused
 - a stranger can't cancel; the owner can; a cancelled request can't be approved

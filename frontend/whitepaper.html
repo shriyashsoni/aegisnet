@@ -243,18 +243,19 @@ struct AgentPermissions {
         When an agent requests execution via <code>AegisExecutionManager.sol</code>, the contract evaluates the transaction value against the agent's threshold. If <code>valueUSD &gt;= biometricThresholdUSD</code>, the transaction is intercepted and placed into a pending state.
       </p>
       <p>
-        To ensure verifiably human intent and prevent unauthorized drains without exposing credentials, AegisNet leverages a Human Approval Gate with ECDSA relayer attestation (ready for World ID proof-of-humanity):
+        To ensure verifiably human intent and prevent unauthorized drains without exposing credentials, AegisNet leverages a Human Approval Gate with ECDSA relayer attestation, integrated with World ID proof-of-humanity:
       </p>
       <div class="callout callout-info">
         <div class="callout-title">🛡️ Human Approval Gate Interception &amp; Settlement Flow</div>
         <p>
           1. Agent submits proposed transaction payload to <code>requestExecution()</code>.<br>
           2. Contract emits <code>ExecutionRequested(requestId, requiresBiometrics = true)</code>.<br>
-          3. Operator initiates approval in client-side wallet or World ID verification modal.<br>
-          4. Gateway relayer validates the human proof / signal, ensuring limits and permissions.<br>
-          5. Single-use nullifier is registered to prevent replay attacks.<br>
-          6. Relayer signs attestation digest enabling <code>approveWithRelayer()</code> onchain.<br>
-          7. Transaction executes atomically on Sepolia via 1inch SwapVM / Uniswap v4 Hook.
+          3. Operator initiates approval in client-side wallet or World ID IDKit widget.<br>
+          4. Zero-knowledge proof \( \pi_{\text{World}} \) binds to signal \( H(\text{requestId}) = \text{keccak256}(\text{requestId}) \gg 8 \).<br>
+          5. Gateway relayer validates proof via World ID Developer API, checking 1-to-1 owner binding.<br>
+          6. Per-request single-use nullifier \( N = \text{keccak256}(N_{\text{world}} \mathbin{\Vert} \text{requestId}) \) is committed.<br>
+          7. Relayer signs attestation digest \( \sigma = \text{Sign}(H(\text{requestId}, N, \text{manager}, \text{chainId})) \).<br>
+          8. Contract verifies signature via <code>approveWithRelayer()</code> and unlocks atomic settlement.
         </p>
       </div>
     </section>
