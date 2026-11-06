@@ -36,6 +36,10 @@ interface IAegisExecutionManager {
         bytes returnData
     );
     event ExecutionCancelled(bytes32 indexed requestId);
+    event RelayerSignerUpdated(address indexed oldSigner, address indexed newSigner);
+
+    function setRelayerSigner(address _signer) external;
+    function relayerSigner() external view returns (address);
 
     function requestExecution(
         address targetContract,
@@ -69,3 +73,4 @@ interface IAegisExecutionManager {
 
     function getExecutionRequest(bytes32 requestId) external view returns (ExecutionRequest memory);
 }
+

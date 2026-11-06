@@ -69,3 +69,4 @@ main().catch((err) => {
   console.error("Verification process failed:", err);
   process.exitCode = 1;
 });
+

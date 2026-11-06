@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 const { time } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe("AegisNet Matrix Core Protocol Tests", function () {
-  let owner, agent, user;
+  let owner, agent, user, relayer;
   let registry, executionManager, swapVMAdapter, uniswapHook, mockToken;
 
   const ROOT_NAME = "aegisnet.eth";
@@ -12,7 +12,7 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
   const DAILY_LIMIT = ethers.parseEther("50000");
 
   beforeEach(async function () {
-    [owner, agent, user] = await ethers.getSigners();
+    [owner, agent, user, relayer] = await ethers.getSigners();
 
     // 1. Deploy AegisSubnameRegistry
     const RegistryFactory = await ethers.getContractFactory("AegisSubnameRegistry");
@@ -24,7 +24,7 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
     executionManager = await ManagerFactory.deploy(
       await registry.getAddress(),
       1, // External Nullifier
-      owner.address // Relayer Signer
+      relayer.address // Dedicated Relayer Signer
     );
     await executionManager.waitForDeployment();
 
@@ -244,7 +244,7 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
         [requestId, nullifierHash, managerAddr, network.chainId]
       );
       
-      const sig = await owner.signMessage(ethers.getBytes(messageHash));
+      const sig = await relayer.signMessage(ethers.getBytes(messageHash));
 
       await executionManager.connect(user).approveWithRelayer(
         requestId,
@@ -297,7 +297,7 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
         [requestId, nullifierHash, managerAddr, network.chainId]
       );
       
-      const sig = await owner.signMessage(ethers.getBytes(messageHash));
+      const sig = await relayer.signMessage(ethers.getBytes(messageHash));
 
       await executionManager.connect(user).verifyBiometricsWithRelayer(
         requestId,
@@ -355,7 +355,7 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
         ["bytes32", "uint256", "address", "uint256"],
         [requestId, nullifier, managerAddr, network.chainId]
       );
-      const sig = await owner.signMessage(ethers.getBytes(messageHash));
+      const sig = await relayer.signMessage(ethers.getBytes(messageHash));
 
       await executionManager.connect(user).approveWithRelayer(requestId, nullifier, sig);
 
@@ -491,6 +491,60 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
         ethers.parseEther("800")
       );
       await tx3.wait();
+    });
+
+    it("Should verify approval signatures against distinct relayer and allow owner to rotate relayer", async function () {
+      const instructions = [{
+        opcode: 1,
+        tokenIn: await mockToken.getAddress(),
+        tokenOut: await mockToken.getAddress(),
+        amountIn: ethers.parseEther("2000"),
+        minAmountOut: ethers.parseEther("1980"),
+        extraData: "0x"
+      }];
+      const encodedCall = swapVMAdapter.interface.encodeFunctionData("executeSwapVMRoute", [
+        ethers.AbiCoder.defaultAbiCoder().encode(
+          ["tuple(uint8 opcode, address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, bytes extraData)[]"],
+          [instructions]
+        )
+      ]);
+
+      const tx = await executionManager.connect(agent).requestExecution(
+        await swapVMAdapter.getAddress(),
+        encodedCall,
+        ethers.parseEther("2000")
+      );
+      const receipt = await tx.wait();
+      const requestId = receipt.logs.find(log => log.fragment && log.fragment.name === "ExecutionRequested").args.requestId;
+
+      const nullifier = 888777666;
+      const managerAddr = await executionManager.getAddress();
+      const network = await ethers.provider.getNetwork();
+
+      const messageHash = ethers.solidityPackedKeccak256(
+        ["bytes32", "uint256", "address", "uint256"],
+        [requestId, nullifier, managerAddr, network.chainId]
+      );
+
+      // Signature by owner (who is NOT the relayer) must be rejected
+      const ownerSig = await owner.signMessage(ethers.getBytes(messageHash));
+      await expect(
+        executionManager.connect(user).approveWithRelayer(requestId, nullifier, ownerSig)
+      ).to.be.revertedWith("AegisManager: invalid relayer signature");
+
+      // Non-owner cannot update relayer signer
+      await expect(
+        executionManager.connect(user).setRelayerSigner(user.address)
+      ).to.be.revertedWith("AegisManager: caller is not owner");
+
+      // Owner rotates relayer signer to user.address
+      await executionManager.connect(owner).setRelayerSigner(user.address);
+      expect(await executionManager.relayerSigner()).to.equal(user.address);
+
+      // Now user signature succeeds
+      const userSig = await user.signMessage(ethers.getBytes(messageHash));
+      await executionManager.connect(user).approveWithRelayer(requestId, nullifier, userSig);
+      expect(await executionManager.isRequestReadyForExecution(requestId)).to.be.true;
     });
   });
 

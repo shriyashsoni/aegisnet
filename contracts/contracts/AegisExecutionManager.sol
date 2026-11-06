@@ -48,6 +48,7 @@ contract AegisExecutionManager {
     );
     event ExecutionExecuted(bytes32 indexed requestId, address indexed targetContract, bool success, bytes returnData);
     event ExecutionCancelled(bytes32 indexed requestId);
+    event RelayerSignerUpdated(address indexed oldSigner, address indexed newSigner);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "AegisManager: caller is not owner");
@@ -59,6 +60,7 @@ contract AegisExecutionManager {
         uint256 _externalNullifier,
         address _relayerSigner
     ) {
+        require(_relayerSigner != address(0), "AegisManager: invalid relayer signer");
         owner = msg.sender;
         registry = IAegisSubnameRegistry(_registry);
         externalNullifier = _externalNullifier;
@@ -66,7 +68,10 @@ contract AegisExecutionManager {
     }
 
     function setRelayerSigner(address _signer) external onlyOwner {
+        require(_signer != address(0), "AegisManager: invalid relayer signer");
+        address oldSigner = relayerSigner;
         relayerSigner = _signer;
+        emit RelayerSignerUpdated(oldSigner, _signer);
     }
 
     /**
