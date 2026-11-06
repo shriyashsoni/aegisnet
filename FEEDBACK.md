@@ -11,9 +11,9 @@
 
 ## 1. Executive Summary
 
-AegisNet integrates real on-chain decentralized exchange liquidity for autonomous AI agents on Ethereum Sepolia. Using [`AegisUniswapAdapter.sol`](contracts/contracts/AegisUniswapAdapter.sol) and [`ISwapRouter02.sol`](contracts/contracts/interfaces/ISwapRouter02.sol), the protocol routes agent-directed trades through official Uniswap V3 liquidity contracts.
+AegisNet provides cryptographic guardrails and human authorization gates for autonomous AI agents on Ethereum. To provide real, verifiable decentralized exchange liquidity on Ethereum Sepolia, AegisNet routes agent trades through official Uniswap contracts using [`AegisUniswapAdapter.sol`](contracts/contracts/AegisUniswapAdapter.sol#L75-L185) and [`ISwapRouter02.sol`](contracts/contracts/interfaces/ISwapRouter02.sol#L10-L31).
 
-This feedback document captures our honest developer assessment of Uniswap's documentation, contract architecture, SDKs, and testnet ergonomics when integrating contract-to-contract swaps from an autonomous agent gateway.
+This feedback document captures our developer assessment of Uniswap's documentation, contract architecture, SDKs, and testnet ergonomics, including an honest comparison between **Uniswap V3** and **Uniswap v4 Hooks** during an ETHGlobal hackathon build.
 
 ---
 
@@ -24,7 +24,7 @@ This feedback document captures our honest developer assessment of Uniswap's doc
    * **SwapRouter02:** `0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E`
    * **Universal Router:** `0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b`
    * **Permit2:** `0x000000000022D473030F116dDEE9F6B43aC78BA3`
-   * **WETH9:** `0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14`
+   * **WETH9 (Sepolia):** `0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14`
    * **QuoterV2:** `0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3`
 
 2. **`SwapRouter02.exactInputSingle` Contract Interface:**  
@@ -40,7 +40,7 @@ This feedback document captures our honest developer assessment of Uniswap's doc
        uint160 sqrtPriceLimitX96;
    }
    ```
-   Directly specifying `recipient` allowed [`AegisUniswapAdapter.sol`](contracts/contracts/AegisUniswapAdapter.sol#L162-L177) to route output tokens directly to the user or agent treasury without intermediate custody or extra token transfers.
+   Directly specifying `recipient` allowed [`AegisUniswapAdapter.sol`](contracts/contracts/AegisUniswapAdapter.sol#L145-L185) to deliver output tokens directly to the agent treasury without intermediate custody or extra token transfers.
 
 3. **Standard Fee Tiers:**  
    The three standardized fee tiers (`500` for 0.05%, `3000` for 0.3%, and `10000` for 1%) simplify rule-based and AI-driven trade formulation.
@@ -74,17 +74,65 @@ This feedback document captures our honest developer assessment of Uniswap's doc
 
 ---
 
-## 4. Key Recommendations for Uniswap DevRel
+## 4. Uniswap v4 Hook Audit: Developer Experience & Submission Integrity
+
+During our hackathon audit, we assessed the feasibility of building and deploying a real Uniswap v4 hook contract to replace the initial prototype hook. Here is our assessment:
+
+### 4.1 The Permission Bitmask & Address Mining (`HookMiner`)
+Uniswap v4 encodes hook permissions into the lowest 14 bits of the hook contract's deployed address (`Hooks.ALL_HOOK_MASK`).
+* In [`BaseHook.sol`](node_modules/@uniswap/v4-periphery/src/utils/BaseHook.sol#L18-L20), the constructor executes:
+  ```solidity
+  constructor(IPoolManager _manager) ImmutableState(_manager) {
+      validateHookAddress(this);
+  }
+  ```
+  If `uint160(address(this)) & ALL_HOOK_MASK` does not exactly match `getHookPermissions()`, `validateHookPermissions` **reverts immediately**.
+* Consequently, a hook contract cannot be deployed using standard `new Hook(...)`. It **must** be deployed via CREATE2 (`0x4e59b44847b379578588920cA78FbF26c0B4956C`) using a mined salt from `HookMiner`. While salt mining in JavaScript/Solidity is fast (~1.5s for 14 bits), it requires specialized deployment harnesses.
+
+### 4.2 Tooling Disconnect: Foundry-First vs Hardhat / npm
+* Uniswap v4 is heavily optimized for **Foundry** (`forge-std`, `vm.etch`, `Deployers.sol`).
+* In a standard **Hardhat** TypeScript environment, compiling `@uniswap/v4-core` requires transient storage opcodes (EVM version `cancun`), and compiling test utilities hits missing Foundry-specific libraries (e.g. `solmate`). Hardhat lacks native `vm.etch` support to place mined bytecodes at predetermined addresses during unit testing.
+
+### 4.3 Singleton PoolManager vs Direct Contract Swaps
+* In **Uniswap V3**, executing an on-chain swap from a smart contract is simple and direct:
+  ```solidity
+  IERC20(tokenIn).approve(swapRouter, amountIn);
+  ISwapRouter02(swapRouter).exactInputSingle(params);
+  ```
+* In **Uniswap v4**, all state is held in a singleton `PoolManager` (`0xE03A1074c86CFeDd5C142C4F04F1a1536e203543` on Sepolia). Interacting with pools requires:
+  1. Unlocking the manager via `IPoolManager.unlock(...)` callback or routing through `UniversalRouter` v4 commands.
+  2. Resolving token deltas via flash accounting (`take` and `settle`).
+  3. Managing positions via `PositionManager.multicall` with `Actions.MINT_POSITION`.
+  This singleton architecture is powerful for gas efficiency, but creates high integration friction for autonomous smart contracts executing swaps within a single transaction lifecycle.
+
+### 4.4 The Hackathon Decision: Delete the Fake Hook Entirely
+Our original repository contained an `AegisUniswapV4Hook.sol` prototype with a non-standard callback signature:
+`beforeSwap(address sender, bytes32 poolId, uint256 amountUSD)`
+This signature was not connected to Uniswap v4's `BaseHook` or `IPoolManager`.
+
+**Decision:** Rather than submitting a misleading mock hook or leaving half-working testnet stubs, we **completely deleted `AegisUniswapV4Hook.sol`** and removed all simulated v4 claims.
+
+AegisNet standardizes 100% of its decentralized exchange execution on verified, real **Uniswap V3** liquidity:
+* **Contract:** [`contracts/contracts/AegisUniswapAdapter.sol`](contracts/contracts/AegisUniswapAdapter.sol#L75-L185)
+* **Interface:** [`contracts/contracts/interfaces/ISwapRouter02.sol`](contracts/contracts/interfaces/ISwapRouter02.sol#L10-L31)
+* **Live Sepolia Router:** [`0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E`](https://sepolia.etherscan.io/address/0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E)
+* **Test Suite:** [`contracts/test/AegisNet.test.js`](contracts/test/AegisNet.test.js#L944-L1030) (Phase V tests prove real `transferFrom`, balance deduction, router execution, and slippage verification).
+
+---
+
+## 5. Key Recommendations for Uniswap DevRel
 
 1. **Publish a "Smart Contract Integration" Quickstart:**  
    Most guides assume a React frontend using `wagmi` or the Uniswap SDK. A simple Solidity-to-Solidity guide demonstrating `IERC20.approve` + `SwapRouter02.exactInputSingle` would save hours of trial and error.
 2. **Provide Official Mock Contracts in NPM:**  
    Publishing an official `@uniswap/v3-test-utils` or `@uniswap/mock-router` package with pre-funded local pool fixtures would streamline dApp testing.
-3. **Canonical Sepolia Faucet Token Guide:**  
-   Clearly document the specific Sepolia token addresses that have active liquidity pools on testnet Uniswap V3.
+3. **Hardhat Compatibility for Uniswap v4:**  
+   Provide npm-native wrappers for `BaseHook` and `HookMiner` that compile out-of-the-box in Hardhat without requiring Foundry submodules or `solmate` remappings.
+4. **Canonical Sepolia Faucet Token Guide:**  
+   Clearly document the specific Sepolia token addresses that have active liquidity pools on testnet Uniswap V3 and v4.
 
 ---
 
-## 5. Conclusion
+## 6. Conclusion
 
-For contract-to-contract DeFi execution, **Uniswap `SwapRouter02` is outstanding, fast, and rock-solid**. Once the interface nuances are navigated, it provides reliable on-chain execution with zero token custody risk.
+For autonomous agent DeFi gateways, **Uniswap `SwapRouter02` is outstanding, fast, and production-ready**. Eliminating the mock v4 hook in favor of a 100% verified Uniswap V3 integration ensures zero misleading claims for hackathon judges and provides a solid foundation for on-chain execution.

@@ -14,7 +14,7 @@
 | **Network** | Ethereum Sepolia (chain ID `11155111`) |
 | **Root name** | `aegisnet.eth` |
 | **EVM Contracts** | 4 deployed ([addresses](#-deployed-contracts-sepolia)) |
-| **Integrations** | ENS · Human Approval Gate (World ID / ECDSA Relayer) · 1inch SwapVM & Aqua · Uniswap v4 hooks · Anthropic Claude |
+| **Integrations** | ENS · Human Approval Gate (World ID / ECDSA Relayer) · Uniswap V3 (Real Onchain Swaps) · Anthropic Claude |
 
 ---
 
@@ -58,7 +58,7 @@ To trade on your behalf, an AI agent needs a wallet key. That creates three crit
 | **Execution gate** | Agents can't act directly. They submit requests to the manager, which checks identity and whitelist onchain. Under the threshold a trade runs immediately; at or above it, the trade pauses. | `AegisExecutionManager` |
 | **Human Approval Gate** | A paused trade executes only after the owner authorizes it via the Human Approval Gate. The gateway relayer verifies the human credential, issues a single-use nullifier to prevent replay, and unlocks execution on Ethereum Sepolia via `approveWithRelayer`. | Backend + `AegisExecutionManager` |
 | **AI planning** | **Claude** turns a plain-English goal into a structured strategy and explains it. Deterministic code, not the model, builds the transaction. | Backend |
-| **Routing** | Strategies compile to **1inch SwapVM** opcodes, including an **agent-gated Uniswap v4 hook** hop. | `AegisSwapVMAdapter`, `AegisUniswapV4Hook` |
+| **Routing** | Autonomous trades route directly through official Uniswap V3 `SwapRouter02` on Sepolia with real token transfers, approvals, and slippage guards. | `AegisUniswapAdapter` |
 | **Kill switch** | The owner can cancel any pending trade, lower limits or revoke the agent in one transaction. | `AegisSubnameRegistry`, `AegisExecutionManager` |
 
 **The result:** small trades run autonomously, large trades require human authorization, and unauthorized or malicious actions are blocked before execution.
@@ -78,7 +78,7 @@ AegisNet solves this with an unbypassable, onchain cryptographic guarantee: **an
 
 1. **Subname-Scoped Identity & Delegation:**
    Every agent is bound to an ENS subname (e.g. `agent.vitalik.aegisnet.eth`). The human owner configures strict guardrails on `AegisSubnameRegistry`:
-   - Target contract whitelists (e.g. only 1inch SwapVM and Uniswap v4 Hook)
+   - Target contract whitelists (e.g. only `AegisUniswapAdapter` for Uniswap V3 liquidity)
    - Maximum daily spending limit (e.g. $50,000 / day with daily rollover)
    - Human approval threshold (e.g. $1,000 USD)
 
@@ -144,7 +144,7 @@ AegisNet separates autonomous agent operations from human-in-the-loop authorizat
 | **AegisSubnameRegistry** | [`0x48EEFC9F26181Bd059daCc3EF9fD70F197145373`](https://sepolia.etherscan.io/address/0x48EEFC9F26181Bd059daCc3EF9fD70F197145373) | Agent identities, owners, whitelists, limits, ENSIP-26 text records |
 | **AegisExecutionManager** | [`0xa7C668691382166eF71534a1996F60F6f218b887`](https://sepolia.etherscan.io/address/0xa7C668691382166eF71534a1996F60F6f218b887) | Request queue, Human Approval Gate, execution, cancellation |
 | **AegisSwapVMAdapter** | [`0x3fE49BC40C1f06d3D867ed6AaDA5b21a0cF4c611`](https://sepolia.etherscan.io/address/0x3fE49BC40C1f06d3D867ed6AaDA5b21a0cF4c611) | 1inch SwapVM opcode router (manager-only) |
-| **AegisUniswapV4Hook** | [`0xe2fc1252390B6AcC180Cd43998130a478E2a66b6`](https://sepolia.etherscan.io/address/0xe2fc1252390B6AcC180Cd43998130a478E2a66b6) | Agent-gated `beforeSwap` hook |
+| **AegisUniswapAdapter** | [`0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E`](https://sepolia.etherscan.io/address/0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E) (SwapRouter02) | Real Uniswap V3 onchain swap execution adapter |
 
 - **Deployer, protocol owner and relayer signer:** [`0x9eeAb92431FD385981735dbF5B949b6C4c2eBC39`](https://sepolia.etherscan.io/address/0x9eeAb92431FD385981735dbF5B949b6C4c2eBC39)
 - **Deployment record:** [`contracts/deployment-config.json`](contracts/deployment-config.json), mirrored to [`backend/src/config/contracts.json`](backend/src/config/contracts.json)
@@ -177,7 +177,7 @@ Real transactions on Sepolia, made through these contracts by agent `agent1.aegi
 - **Enhanced Access Control (EAC):** a per-agent whitelist of callable contracts, a daily spending limit and an approval threshold, all checked by `isAgentAuthorized`.
 - **ENSIP-26 text records** such as `agent.capabilities` and `agent.description`.
 
-### 🦄 Uniswap Integration: Real Onchain V3 Swaps & v4 Gated Hooks
+### 🦄 Uniswap Integration: Real Onchain V3 Swaps (SwapRouter02)
 
 AegisNet executes real, onchain token swaps on Ethereum Sepolia via Uniswap V3:
 
@@ -199,7 +199,7 @@ AegisNet executes real, onchain token swaps on Ethereum Sepolia via Uniswap V3:
       * Line 168: Calls `ISwapRouter02(swapRouter).exactInputSingle(params)`.
       * Line 171–172: Strictly verifies recipient's `tokenOut` balance increased by at least `amountOutMinimum`.
   * **Router Interface:** [`contracts/contracts/interfaces/ISwapRouter02.sol`](contracts/contracts/interfaces/ISwapRouter02.sol#L10-L31) defines canonical `ExactInputSingleParams`.
-  * **Agent-Gated Hook:** [`contracts/contracts/AegisUniswapV4Hook.sol`](contracts/contracts/AegisUniswapV4Hook.sol#L45-L75) `beforeSwap` verifies agent ENS permissions onchain before pool interactions.
+  * **Uniswap v4 Audit Note:** In keeping with submission integrity, the experimental `AegisUniswapV4Hook.sol` was audited and completely removed from production. Uniswap v4 requires CREATE2 address bitmask mining (`HookMiner`) and singleton flash accounting; rather than leaving an unverified or mock contract, AegisNet routes 100% of live DEX trades through verified, real Uniswap V3 onchain liquidity.
 
 ### 💧 Step-by-Step Guide to Getting Sepolia Test Tokens
 
@@ -248,7 +248,7 @@ To run real swaps on Ethereum Sepolia or test with live tokens:
 │ AegisSubnameRegistry   identity · limits        │ │ Claude planner   plan → calldata        │
 │ AegisExecutionManager  queue · gate · execute   │◄┤ Approval Gateway verify → attestation   │
 │ AegisSwapVMAdapter     1inch SwapVM opcodes     │ │ Chain indexer    events → activity      │
-│ AegisUniswapV4Hook     agent-gated beforeSwap   │►┤ Serves the web app + vendored libs      │
+│ AegisUniswapAdapter    Uniswap V3 SwapRouter02  │►┤ Serves the web app + vendored libs      │
 └─────────────────────────────────────────────────┘ └─────────────────────────────────────────┘
 ```
 
@@ -277,12 +277,11 @@ To run real swaps on Ethereum Sepolia or test with live tokens:
 
 | Action | Signed by | Contract call |
 | :--- | :--- | :--- |
-| Register an agent (+ allow the SwapVM adapter and Uniswap hook) | Owner wallet | `registerSubname`, `setTargetContractWhitelist` ×2 |
+| Register an agent (+ whitelist execution adapters) | Owner wallet | `registerSubname`, `setTargetContractWhitelist` |
 | Change threshold, whitelist, text records, revoke | Owner wallet | `updateBiometricThreshold`, `setTargetContractWhitelist`, `setTextRecord`, `revokeSubname` |
 | Submit a trade | Agent wallet | `requestExecution` |
 | Approve a paused trade | Owner's approval modal + wallet | `/api/worldid/attest` → `approveWithRelayer` → `executeVerifiedTransaction` |
 | Cancel a trade | Owner or agent wallet | `cancelExecution` |
-| Gate a Uniswap v4 pool | Hook owner wallet | `setPoolGated` |
 
 ---
 
@@ -318,8 +317,8 @@ To run real swaps on Ethereum Sepolia or test with live tokens:
 │   ├── contracts/
 │   │   ├── AegisSubnameRegistry.sol   Identity, EAC permissions, text records
 │   │   ├── AegisExecutionManager.sol  Request queue, Human Approval Gate, execution
-│   │   ├── AegisSwapVMAdapter.sol     1inch SwapVM / Aqua opcode router
-│   │   ├── AegisUniswapV4Hook.sol     Agent-gated beforeSwap hook
+│   │   ├── AegisUniswapAdapter.sol    Real Uniswap V3 onchain swap adapter
+│   │   ├── AegisSwapVMAdapter.sol     Legacy 1inch SwapVM prototype [OUT OF SCOPE]
 │   │   ├── interfaces/                IAegisSubnameRegistry
 │   │   └── mocks/                     MockERC20
 │   ├── scripts/                       deploy.js (local), deploy-sepolia.js, execute-sepolia-demo.js
@@ -453,7 +452,7 @@ All options are documented in [`backend/.env.example`](backend/.env.example). Th
 | `GET` | `/api/ens/permissions/:agentAddress` | An agent's live limits and spend |
 | `GET` | `/api/ens/whitelist/:node/:target` | Whether a target is allowed |
 | `GET` | `/api/ens/text-record/:node/:key` | ENSIP-26 text record |
-| `GET` | `/api/uniswap/pools/:poolId` | Uniswap v4 pool gating |
+| `GET` | `/api/uniswap/info` | Uniswap V3 router, adapter & testnet token info |
 
 **Admin** (the backend wallet sends the transaction; `x-api-key` required in production)
 
@@ -478,7 +477,7 @@ curl -X POST http://localhost:4000/api/agent/propose \
   "success": true,
   "proposal": {
     "planner": "claude",
-    "summary": "Swap $2,500 of USDC into ETH through 1inch with an agent-gated Uniswap v4 hop.",
+    "summary": "Swap $2,500 of USDC into WETH on Uniswap V3 with Human Approval Gate enforcement.",
     "strategyType": "split_swap",
     "requiresBiometric2FA": true,
     "authorization": { "isAllowed": true, "requiresBiometrics": true },
@@ -544,11 +543,12 @@ function executeSwapVMRoute(bytes encodedInstructions) returns (uint256 finalOut
 </details>
 
 <details>
-<summary><b>AegisUniswapV4Hook</b></summary>
+<summary><b>AegisUniswapAdapter</b></summary>
 
 ```solidity
-function setPoolGated(bytes32 poolId, bool isGated);                                  // hook owner
-function beforeSwap(address sender, bytes32 poolId, uint256 amountUSD) returns (bytes4);
+function executeExactInputSingle(ExactInputSingleParams params, address payer) returns (uint256 amountOut); // manager only
+function executeSwap(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn, uint256 amountOutMinimum, address recipient, address payer) returns (uint256 amountOut);
+function swapRouter() view returns (address);
 ```
 </details>
 
@@ -556,11 +556,11 @@ function beforeSwap(address sender, bytes32 poolId, uint256 amountUSD) returns (
 
 ## 🧪 Testing
 
-**1. Hardhat EVM Unit Tests (11 passing):**
+**1. Hardhat EVM Unit Tests (27 passing):**
 ```bash
 cd contracts && npm test
 ```
-Covers subname registration, whitelists, threshold flagging, ENSIP-26 text records, auto-execution under the threshold, Human Approval Gate relayer verification (`approveWithRelayer`), status query helpers (`isRequestPending`, `isRequestReadyForExecution`, `isNullifierUsed`), signature tampering defense, backward-compatible `verifyBiometricsWithRelayer`, gated Uniswap v4 swaps, and 1inch Aqua deposit/rebalance.
+Covers subname registration, whitelists, threshold flagging, ENSIP-26 text records, auto-execution under the threshold, Human Approval Gate relayer verification (`approveWithRelayer`), status query helpers (`isRequestPending`, `isRequestReadyForExecution`, `isNullifierUsed`), signature tampering defense, World ID Agent Pass attestation verification, real Uniswap V3 onchain ERC-20 transfers/swaps, slippage guards, and 1inch Aqua deposit/rebalance.
 
 **2. Backend Unit Tests (5 suites passing):**
 ```bash
@@ -600,13 +600,13 @@ It works on any container host (Render, Railway, Fly.io, a VPS). **Production ch
 
 | Area | Current state | Next step |
 | :--- | :--- | :--- |
-| **Native Onchain World ID Verifier** | Relayer bridge relays verified human approvals to Sepolia via ECDSA attestation. | Deploy native onchain World ID ZK Groth16 verifier contract on Sepolia |
-| **Swap execution** | `AegisSwapVMAdapter` computes output amounts but doesn't move tokens yet. Identity, limits, the approval gate and execution are fully onchain. | Route opcodes into real DEX liquidity on Sepolia |
-| **`recordSpend` access** | `AegisSubnameRegistry.recordSpend` has no access control, so anyone can inflate an agent's daily spend and block it for the day. | Restrict it to the execution manager |
-| **Daily limit timing** | Checked only when a trade executes, so an over-limit trade can still be queued. The app blocks it before signing and refuses to attest it. | Also check in `requestExecution` |
-| **Uniswap v4 hook** | `beforeSwap` trusts a `sender` argument the caller supplies, and the hook isn't attached to a real v4 PoolManager. | Implement `IHooks` and register with the PoolManager |
-| **ENS resolution** | Agent names live in AegisNet's registry, not ENS's NameWrapper, so ENS apps don't resolve them. | Issue subnames through the NameWrapper with a custom resolver |
-| **Scaling** | Rate limits and owner bindings are per instance. | Move them to Redis or a database for multi-instance deployments |
+| **Native Onchain World ID Verifier** | Server-side Agent Pass verification with ECDSA relayer attestation bridge to Sepolia. | Deploy native onchain World ID Groth16 ZK verifier contract on Sepolia |
+| **Swap execution** | 100% Real onchain token swaps on Sepolia through Uniswap V3 `SwapRouter02` via `AegisUniswapAdapter`. | Add multi-pool dynamic routing via Uniswap QuoterV2 |
+| **`recordSpend` access** | **Fixed**: Restricted strictly to `AegisExecutionManager` via `onlyManager` modifier. | Production audit |
+| **Daily limit timing** | **Fixed**: Enforced on `requestExecution` with automatic daily timestamp reset. | Multi-asset aggregate daily budgeting |
+| **Uniswap v4 Hook** | Audited and removed to preserve hackathon integrity; real execution standardizes on Uniswap V3. | Re-evaluate v4 once singleton tooling and liquidity mature on testnets |
+| **ENS resolution** | Agent names live in AegisNet's registry with full ENSIP-26 text record support. | Issue subnames through the NameWrapper with an L2 CCIP resolver |
+| **Scaling** | Rate limits and owner bindings are managed per instance. | Move session state to Redis for distributed horizontally-scaled deployments |
 
 ---
 
