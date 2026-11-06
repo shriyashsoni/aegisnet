@@ -1297,14 +1297,24 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Copy buttons (delegated)
+  // Copy buttons (delegated) with instant checkmark feedback
   // ---------------------------------------------------------------------------
+  var CHECK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
   document.addEventListener('click', function (e) {
     var b = e.target.closest('[data-copy]');
     if (!b) return;
     var text = b.dataset.copy;
     (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(
-      function () { toast('Copied', 'ok'); },
+      function () {
+        b.classList.add('is-copied');
+        var prev = b.innerHTML;
+        b.innerHTML = CHECK_ICON;
+        setTimeout(function () {
+          b.classList.remove('is-copied');
+          b.innerHTML = prev;
+        }, 1500);
+        toast('Copied to clipboard', 'ok');
+      },
       function () { window.prompt('Copy value', text); }
     );
   });
