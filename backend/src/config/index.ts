@@ -17,6 +17,18 @@ let contractAddresses = { ...LOCAL_DEFAULTS };
 let deployedStartBlock: number | undefined = undefined;
 
 // tsc does not copy JSON into dist/, so also look in src/config when running the build
+const envOverrides: Partial<typeof LOCAL_DEFAULTS> = {
+  AegisSubnameRegistry: process.env.CONTRACT_REGISTRY,
+  WorldIDVerifier: process.env.CONTRACT_WORLD_ID,
+  AegisExecutionManager: process.env.CONTRACT_EXECUTION_MANAGER,
+  AegisSwapVMAdapter: process.env.CONTRACT_SWAPVM_ADAPTER,
+  AegisUniswapAdapter: process.env.CONTRACT_UNISWAP_ADAPTER,
+};
+for (const [key, value] of Object.entries(envOverrides)) {
+  if (value) contractAddresses[key as keyof typeof LOCAL_DEFAULTS] = value;
+}
+
+// Canonical deployment config is authoritative (single source of truth)
 const deployedConfigPath = [
   path.resolve(__dirname, '../../../contracts/deployment-config.json'),
   path.resolve(__dirname, '../../contracts/deployment-config.json'),
@@ -37,17 +49,6 @@ if (deployedConfigPath) {
   }
 }
 
-const envOverrides: Partial<typeof LOCAL_DEFAULTS> = {
-  AegisSubnameRegistry: process.env.CONTRACT_REGISTRY,
-  WorldIDVerifier: process.env.CONTRACT_WORLD_ID,
-  AegisExecutionManager: process.env.CONTRACT_EXECUTION_MANAGER,
-  AegisSwapVMAdapter: process.env.CONTRACT_SWAPVM_ADAPTER,
-  AegisUniswapAdapter: process.env.CONTRACT_UNISWAP_ADAPTER,
-};
-for (const [key, value] of Object.entries(envOverrides)) {
-  if (value) contractAddresses[key as keyof typeof LOCAL_DEFAULTS] = value;
-}
-
 // Treat template placeholders as "not configured"
 const realValue = (v?: string) => (v && !/your_|_here$|^0x_/i.test(v) ? v : undefined);
 
@@ -64,7 +65,7 @@ export const config = {
   rpcUrl: process.env.SEPOLIA_RPC_URL || 'http://127.0.0.1:8545',
   expectedChainId: parseInt(process.env.CHAIN_ID || '11155111', 10),
   // Relayer key: signs World ID attestations the contract checks (must equal the manager's relayerSigner)
-  privateKey: realValue(process.env.PRIVATE_KEY) || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+  privateKey: realValue(process.env.RELAYER_PRIVATE_KEY) || realValue(process.env.PRIVATE_KEY) || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
   rootEnsName: process.env.ENS_ROOT_NAME || 'aegisnet.eth',
   worldIdAppId: process.env.WORLD_ID_APP_ID || 'app_staging_aegisnet_2026',
   worldIdAction: process.env.WORLD_ID_ACTION || 'agent-high-value-auth',

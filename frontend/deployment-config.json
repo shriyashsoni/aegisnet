@@ -2,13 +2,13 @@
   "network": "sepolia",
   "chainId": "11155111",
   "rootName": "aegisnet.eth",
-  "deployer": "0x9eeAb92431FD385981735dbF5B949b6C4c2eBC39",
-  "startBlock": 11787900,
+  "deployer": "0xB6Ba1Be32B7cA2729551882B71E8F469D06510e6",
+  "relayer": "0x3C29CC205E4fb3e1cA6C89DECDFE5A5d4e46E799",
   "contracts": {
-    "AegisSubnameRegistry": "0x48EEFC9F26181Bd059daCc3EF9fD70F197145373",
-    "AegisExecutionManager": "0xa7C668691382166eF71534a1996F60F6f218b887",
-    "AegisSwapVMAdapter": "0x3fE49BC40C1f06d3D867ed6AaDA5b21a0cF4c611",
-    "AegisUniswapAdapter": "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E"
+    "AegisSubnameRegistry": "0x815893baD1708a201eEEAF226eeD576A7Ffea4BC",
+    "AegisExecutionManager": "0x8d5b392839300b487adDeeCc35F5BC534111CD33",
+    "AegisUniswapAdapter": "0xAaD03d978d84ccA70125F998b61ff7b539F565f4",
+    "AegisSwapVMAdapter": "0xbd9e58d4a0e5987BC26f7898f9f66043bf9716C5"
   },
-  "timestamp": "2026-09-26T18:28:01.657Z"
+  "timestamp": "2026-11-06T11:09:26.368Z"
 }

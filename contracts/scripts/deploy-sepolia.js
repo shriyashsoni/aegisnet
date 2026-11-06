@@ -38,7 +38,7 @@ async function main() {
 
   // 2. AegisExecutionManager
   console.log("\n2. Deploying AegisExecutionManager...");
-  console.log(`> Relayer Signer Account: ${relayerSigner}`);
+  console.log(`> Initial Relayer Signer Account: ${relayerSigner}`);
   const Manager = await ethers.getContractFactory("AegisExecutionManager");
   const manager = await Manager.deploy(
     registryAddr,
@@ -48,6 +48,23 @@ async function main() {
   await manager.waitForDeployment();
   const managerAddr = await manager.getAddress();
   console.log(`> AegisExecutionManager deployed at: ${managerAddr}`);
+
+  // Explicitly set & verify relayer address via owner-only setter on-chain
+  console.log("   Configuring relayerSigner onchain via setRelayerSigner...");
+  const setRelayerTx = await manager.setRelayerSigner(relayerSigner);
+  await setRelayerTx.wait();
+
+  const onchainRelayer = await manager.relayerSigner();
+  console.log(`> Deployer/Owner Address          : ${deployer.address}`);
+  console.log(`> Expected Relayer Key Address     : ${relayerSigner}`);
+  console.log(`> Onchain Verified Relayer Address : ${onchainRelayer}`);
+  if (onchainRelayer.toLowerCase() !== relayerSigner.toLowerCase()) {
+    throw new Error(`On-chain relayer (${onchainRelayer}) does not match expected (${relayerSigner})`);
+  }
+  if (deployer.address.toLowerCase() === relayerSigner.toLowerCase()) {
+    throw new Error("Deployer address and Relayer address must NOT be the same! Separation required.");
+  }
+  console.log("✅ Verified: Relayer address configured on-chain and strictly decoupled from deployer!");
 
   // Link manager to registry
   await (await registry.setExecutionManager(managerAddr)).wait();
