@@ -7,7 +7,7 @@ import { config } from './config';
 import { provider, signerAddress, getChainId } from './chain';
 import { HttpError } from './validate';
 import { securityHeaders } from './middleware';
-import { AdapterABI, HookABI, ManagerABI, RegistryABI } from './abis';
+import { AdapterABI, HookABI, ManagerABI, RegistryABI, UniswapAdapterABI } from './abis';
 import { indexer } from './services/indexer.service';
 import { claudePlanner } from './services/claudePlanner.service';
 import agentRoutes from './routes/agent.routes';
@@ -38,7 +38,7 @@ const checks = {
   chainIdOk: null as boolean | null,
   relayerOk: null as boolean | null,
   relayerOnchain: null as string | null,
-  hookOwner: null as string | null,
+  uniswapRouter: null as string | null,
 };
 
 async function runChecks() {
@@ -48,8 +48,10 @@ async function runChecks() {
     const manager = new ethers.Contract(config.contracts.AegisExecutionManager, ManagerABI, provider);
     checks.relayerOnchain = await manager.relayerSigner();
     checks.relayerOk = checks.relayerOnchain!.toLowerCase() === signerAddress.toLowerCase();
-    const hook = new ethers.Contract(config.contracts.AegisUniswapV4Hook, HookABI, provider);
-    checks.hookOwner = await hook.owner();
+    if (config.contracts.AegisUniswapAdapter) {
+      const adapter = new ethers.Contract(config.contracts.AegisUniswapAdapter, UniswapAdapterABI, provider);
+      checks.uniswapRouter = await adapter.swapRouter();
+    }
     if (!checks.chainIdOk) console.warn(`⚠ RPC chain ${chainId} ≠ expected ${config.expectedChainId}`);
     if (!checks.relayerOk) {
       console.warn(`⚠ PRIVATE_KEY (${signerAddress}) is not the manager's relayerSigner (${checks.relayerOnchain}). World ID approvals will be rejected onchain.`);
@@ -75,7 +77,7 @@ app.get('/api/health', async (_req, res) => {
     rootEnsName: config.rootEnsName,
     biometricThresholdUSD: config.biometricDefaultThresholdUSD,
     relayer: { address: signerAddress, matchesContract: checks.relayerOk, onchain: checks.relayerOnchain },
-    hookOwner: checks.hookOwner,
+    uniswapRouter: checks.uniswapRouter,
     approvalGate: 'Human Approval Gate (World ID 2FA)',
     ai: { enabled: claudePlanner.enabled, model: claudePlanner.enabled ? claudePlanner.model : null },
     oneInchQuotes: Boolean(config.oneInchApiKey),
@@ -88,7 +90,7 @@ app.get('/api/health', async (_req, res) => {
 
 app.get('/api/abis', (_req, res) => {
   res.setHeader('Cache-Control', 'public, max-age=300');
-  res.json({ registry: RegistryABI, manager: ManagerABI, hook: HookABI, adapter: AdapterABI });
+  res.json({ registry: RegistryABI, manager: ManagerABI, uniswapAdapter: UniswapAdapterABI, adapter: AdapterABI });
 });
 
 // ---------------------------------------------------------------------------

@@ -36,7 +36,7 @@ Available strategy types:
 - "split_swap": split the order across liquidity sources for better pricing on larger orders (0x02), then the slippage check.
 - "aqua_position": deposit into a 1inch Aqua self-custodial liquidity position and rebalance it (0x05, 0x06). Use for yield, liquidity or "earn" goals.
 
-useUniswapV4Hop adds a hop through the agent-gated Uniswap v4 hook (0x04), whose beforeSwap check verifies the agent's ENS permissions. Enable it for swaps unless the operator asks to avoid Uniswap. It does not apply to aqua_position.
+useUniswapV4Hop (legacy opcode 0x04) was an experimental hop; for real onchain execution, AegisNet routes swaps through Uniswap V3 (SwapRouter02). Do not rely on v4 hooks. It does not apply to aqua_position.
 
 Supported tokens: USDC, USDT, DAI, WETH, WBTC (use WETH for ETH, WBTC for BTC). tokenIn and tokenOut must differ. If the operator fixed a token, keep it.
 

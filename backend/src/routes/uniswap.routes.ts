@@ -7,6 +7,18 @@ const router = Router();
 const uniswapService = new UniswapService();
 
 /**
+ * GET /api/uniswap/info
+ * Returns official Uniswap V3 router, adapter, and Sepolia deployment details.
+ */
+router.get(
+  '/info',
+  route(async (_req, res) => {
+    const info = await uniswapService.getInfo();
+    res.json({ success: true, ...info });
+  })
+);
+
+/**
  * GET /api/uniswap/pools/:poolId
  * Whether a Uniswap v4 pool is gated by the AegisNet beforeSwap hook.
  * poolId may be a bytes32 pool ID or a label (hashed with keccak256).
