@@ -23,6 +23,10 @@ interface IAegisSubnameRegistry {
     event BiometricThresholdUpdated(bytes32 indexed subnameNode, uint256 newThresholdUSD);
     event SubnameRevoked(bytes32 indexed subnameNode);
     event TextRecordChanged(bytes32 indexed subnameNode, string key, string value);
+    event ExecutionManagerSet(address indexed manager);
+
+    function setExecutionManager(address _manager) external;
+    function executionManager() external view returns (address);
 
     function registerSubname(
         string calldata subnameLabel,

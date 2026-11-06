@@ -11,6 +11,7 @@ import "./interfaces/IAegisSubnameRegistry.sol";
 contract AegisSubnameRegistry is IAegisSubnameRegistry {
     bytes32 public immutable rootNode; // Node hash of root ENS name (e.g. shriyash.eth)
     address public owner;
+    address public executionManager;
 
     // Subname Node => Agent Permissions
     mapping(bytes32 => AgentPermissions) public agentRegistry;
@@ -31,9 +32,21 @@ contract AegisSubnameRegistry is IAegisSubnameRegistry {
         _;
     }
 
+    modifier onlyManager() {
+        require(msg.sender == executionManager, "AegisRegistry: caller is not execution manager");
+        _;
+    }
+
     constructor(string memory rootName) {
         owner = msg.sender;
         rootNode = keccak256(abi.encodePacked(bytes32(0), keccak256(bytes(rootName))));
+    }
+
+    function setExecutionManager(address _executionManager) external override onlyOwner {
+        require(_executionManager != address(0), "AegisRegistry: invalid address");
+        require(executionManager == address(0), "AegisRegistry: execution manager already set");
+        executionManager = _executionManager;
+        emit ExecutionManagerSet(_executionManager);
     }
 
     function getAgentPermissions(bytes32 subnameNode) external view override returns (AgentPermissions memory) {
@@ -140,7 +153,7 @@ contract AegisSubnameRegistry is IAegisSubnameRegistry {
     /**
      * @notice Record spend amount for daily limit calculations
      */
-    function recordSpend(bytes32 subnameNode, uint256 amountUSD) external override {
+    function recordSpend(bytes32 subnameNode, uint256 amountUSD) external override onlyManager {
         AgentPermissions storage perm = agentRegistry[subnameNode];
         require(perm.isActive, "AegisRegistry: subname inactive");
 

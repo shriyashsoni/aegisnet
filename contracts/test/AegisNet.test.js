@@ -27,6 +27,9 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
     );
     await executionManager.waitForDeployment();
 
+    // Link executionManager in registry
+    await registry.connect(owner).setExecutionManager(await executionManager.getAddress());
+
     // 4. Deploy 1inch SwapVM Adapter
     const SwapVMFactory = await ethers.getContractFactory("AegisSwapVMAdapter");
     swapVMAdapter = await SwapVMFactory.deploy(await executionManager.getAddress());
@@ -120,6 +123,28 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
 
       expect(capRecord).to.equal("1inch-swapvm,uniswap-v4-hook");
       expect(bioRecord).to.equal("1000");
+    });
+
+    it("Should allow owner to set executionManager once and prevent resetting", async function () {
+      expect(await registry.executionManager()).to.equal(await executionManager.getAddress());
+
+      await expect(
+        registry.connect(owner).setExecutionManager(user.address)
+      ).to.be.revertedWith("AegisRegistry: execution manager already set");
+    });
+
+    it("Should restrict recordSpend to only executionManager and revert on outside caller", async function () {
+      await registry.connect(owner).registerSubname(
+        SUBNAME_LABEL,
+        agent.address,
+        BIOMETRIC_THRESHOLD,
+        DAILY_LIMIT
+      );
+      const subnameNode = await registry.agentToNode(agent.address);
+
+      await expect(
+        registry.connect(user).recordSpend(subnameNode, ethers.parseEther("100"))
+      ).to.be.revertedWith("AegisRegistry: caller is not execution manager");
     });
   });
 

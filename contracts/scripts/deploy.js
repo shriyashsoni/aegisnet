@@ -32,6 +32,10 @@ async function main() {
   const managerAddr = await manager.getAddress();
   console.log(`> AegisExecutionManager deployed at: ${managerAddr}`);
 
+  // Link manager to registry
+  await (await registry.setExecutionManager(managerAddr)).wait();
+  console.log(`> AegisSubnameRegistry executionManager set to: ${managerAddr}`);
+
   // 3. AegisSwapVMAdapter
   console.log("3. Deploying AegisSwapVMAdapter (1inch)...");
   const SwapVM = await ethers.getContractFactory("AegisSwapVMAdapter");
