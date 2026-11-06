@@ -5,7 +5,7 @@
 [![TypeScript](https://img.shields.io/badge/Backend-TypeScript-3178C6?style=for-the-badge&logo=typescript)](backend/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=for-the-badge)](LICENSE)
 
-**Onchain guardrails and execution infrastructure for autonomous AI agents on Ethereum.** Each agent receives an ENS-style identity with hard spending limits enforced onchain. Claude plans trades in plain English, and high-value trades pause until a verified human owner authorizes the action via the **Human Approval Gate** (World ID / ECDSA relayer attestation) with single-use nullifiers to prevent replay attacks.
+**Onchain guardrails and execution infrastructure for autonomous AI agents on Ethereum.** Each agent receives an onchain identity with hard spending limits enforced onchain. 0G Private Compute plans trades with verifiable AI inference, and high-value trades pause until a verified human owner authorizes the action via the **Human Approval Gate** (World ID Agent Pass / ECDSA relayer attestation) with single-use nullifiers to prevent replay attacks.
 
 > Live on **Ethereum Sepolia** · Solidity 0.8.24 · Backend in TypeScript · Wallet-signed web app · [Demo Video Script](DEMO_SCRIPT.md)
 
@@ -14,7 +14,7 @@
 | **Network** | Ethereum Sepolia (chain ID `11155111`) |
 | **Root name** | `aegisnet.eth` |
 | **EVM Contracts** | 4 deployed ([addresses](#-deployed-contracts-sepolia)) |
-| **Integrations** | ENS · Human Approval Gate (World ID / ECDSA Relayer) · Uniswap V3 (Real Onchain Swaps) · Anthropic Claude |
+| **Integrations** | World ID Agent Pass · Uniswap V3 (Real Onchain Swaps) · 0G Private Compute · 0G Decentralized Storage · ENS |
 
 ---
 
@@ -56,9 +56,10 @@ To trade on your behalf, an AI agent needs a wallet key. That creates three crit
 | :--- | :--- | :--- |
 | **Identity & limits** | Every agent is registered as `name.aegisnet.eth` with an owner, a whitelist of contracts it may call, a daily spending limit and an approval threshold. | `AegisSubnameRegistry` |
 | **Execution gate** | Agents can't act directly. They submit requests to the manager, which checks identity and whitelist onchain. Under the threshold a trade runs immediately; at or above it, the trade pauses. | `AegisExecutionManager` |
-| **Human Approval Gate** | A paused trade executes only after the owner authorizes it via the Human Approval Gate. The gateway relayer verifies the human credential, issues a single-use nullifier to prevent replay, and unlocks execution on Ethereum Sepolia via `approveWithRelayer`. | Backend + `AegisExecutionManager` |
-| **AI planning** | **Claude** turns a plain-English goal into a structured strategy and explains it. Deterministic code, not the model, builds the transaction. | Backend |
+| **Human Approval Gate** | A paused trade executes only after the owner authorizes it via the Human Approval Gate (World ID Agent Pass). The gateway relayer verifies the human credential, issues a single-use nullifier to prevent replay, and unlocks execution on Ethereum Sepolia via `approveWithRelayer`. | Backend + `AegisExecutionManager` |
+| **AI planning** | **0G Private Compute** evaluates goals with verifiable TEE inference. Deterministic code, not the model, builds the transaction. | 0G Compute + Backend |
 | **Routing** | Autonomous trades route directly through official Uniswap V3 `SwapRouter02` on Sepolia with real token transfers, approvals, and slippage guards. | `AegisUniswapAdapter` |
+| **Audit trail** | Every planned trade and executed decision is committed to 0G Decentralized Storage with an immutable Merkle root. | 0G Galileo Testnet |
 | **Kill switch** | The owner can cancel any pending trade, lower limits or revoke the agent in one transaction. | `AegisSubnameRegistry`, `AegisExecutionManager` |
 
 **The result:** small trades run autonomously, large trades require human authorization, and unauthorized or malicious actions are blocked before execution.

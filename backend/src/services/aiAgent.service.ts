@@ -110,7 +110,7 @@ export class AIAgentService {
     amountUSD: number,
     opts: StrategyOptions = {}
   ): Promise<{ proposal: TradeStrategyProposal; encodedCallData: string; targetContract: string }> {
-    const targetContract = config.contracts.AegisSwapVMAdapter;
+    let targetContract = config.contracts.AegisUniswapAdapter || config.contracts.AegisSwapVMAdapter;
     const checks: string[] = [];
 
     // Identity + onchain authorization first, so the planner knows the agent's real limits
@@ -119,9 +119,17 @@ export class AIAgentService {
     try {
       permissions = await this.ensService.getAgentPermissionsByAddress(agentAddress);
       if (permissions) {
-        const auth = await this.ensService.verifyAgentAuthorization(agentAddress, targetContract, amountUSD);
+        let auth = await this.ensService.verifyAgentAuthorization(agentAddress, targetContract, amountUSD);
+        // Fallback to SwapVM adapter if Uniswap adapter is not whitelisted but SwapVM is
+        if (!auth.isAllowed && config.contracts.AegisSwapVMAdapter && config.contracts.AegisSwapVMAdapter !== targetContract) {
+          const fallbackAuth = await this.ensService.verifyAgentAuthorization(agentAddress, config.contracts.AegisSwapVMAdapter, amountUSD);
+          if (fallbackAuth.isAllowed) {
+            auth = fallbackAuth;
+            targetContract = config.contracts.AegisSwapVMAdapter;
+          }
+        }
         authorization = { isAllowed: auth.isAllowed, requiresBiometrics: auth.requiresBiometrics };
-        if (!auth.isAllowed) checks.push('⚠ Onchain check: agent is inactive or the SwapVM adapter is not whitelisted.');
+        if (!auth.isAllowed) checks.push('⚠ Onchain check: agent is inactive or the Uniswap adapter is not whitelisted.');
       } else {
         checks.push('⚠ This address has no ENS agent identity yet. Register it before executing.');
       }
