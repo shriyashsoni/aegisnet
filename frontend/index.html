@@ -757,7 +757,7 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
         </li>
         <li class="reveal">
           <span class="step-n">II</span>
-          <div><h3>Strategy &amp; route</h3><p>The AI agent turns the goal into a SwapVM instruction list, including an agent-gated Uniswap v4 hop and a slippage guard, encoded for <code>AegisSwapVMAdapter</code>.</p></div>
+          <div><h3>0G AI Compute &amp; Storage</h3><p>The agent formulates its execution plan in <strong>0G Private Compute</strong> (TEE-attested AI) and commits an immutable decision audit record to <strong>0G Storage</strong>.</p></div>
         </li>
         <li class="reveal">
           <span class="step-n">III</span>
@@ -772,9 +772,9 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
 
     <div class="terminal reveal" aria-label="Example request trace">
       <div class="terminal-bar"><i></i><i></i><i></i><span>request trace</span></div>
-<pre><span class="t-dim"># 1. Claude plans the trade</span>
+<pre><span class="t-dim"># 1. 0G Private Compute plans &amp; 0G Storage records decision</span>
 <span class="t-key">POST</span> /api/agent/propose  { <span class="t-str">"amountUSD"</span>: 2500 }
-<span class="t-dim">←</span> <span class="t-str">"Swap $2,500 USDC to ETH via 1inch"</span>
+<span class="t-dim">←</span> 0G Req: <span class="t-str">b9fed931…</span> · 0G Root: <span class="t-str">0xc9d554…</span>
 
 <span class="t-dim"># 2. agent wallet signs on Sepolia</span>
 <span class="t-key">requestExecution</span>(adapter, calldata, 2500e18)

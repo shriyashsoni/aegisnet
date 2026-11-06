@@ -219,11 +219,43 @@
     $('#kpi-network').innerHTML = h.rpcReachable ? esc(h.network) : '<span class="s-err">RPC unreachable</span>';
     $('#kpi-root').textContent = h.rootEnsName || '—';
     $('#kpi-threshold').textContent = h.biometricThresholdUSD != null ? '≥ ' + usd(h.biometricThresholdUSD) : '—';
-    $('#kpi-ai').innerHTML = h.ai && h.ai.enabled ? '<span class="s-ok">●</span> ' + esc(h.ai.model) : '<span class="hint">Rules (no API key)</span>';
+    if (h.ai && h.ai.provider === '0g') {
+      $('#kpi-ai').innerHTML = '<span class="s-ok">●</span> 0G Private Compute';
+    } else {
+      $('#kpi-ai').innerHTML = h.ai && h.ai.enabled ? '<span class="s-ok">●</span> ' + esc(h.ai.model) : '<span class="hint">Rules (no API key)</span>';
+    }
     if ($('#kpi-approval')) {
       $('#kpi-approval').innerHTML = '<span class="s-ok" style="color:#4ade80">●</span> Human Approval Gate';
     } else if ($('#kpi-worldid')) {
       $('#kpi-worldid').innerHTML = '<span class="s-ok" style="color:#4ade80">●</span> Human Approval Gate';
+    }
+
+    // 0G Proof Panel & KPIs
+    if (h.zg) {
+      if (h.zg.compute && $('#zg-planner-model')) {
+        $('#zg-planner-model').textContent = h.zg.compute.model || '0gm-1.0-35b-a3b';
+      }
+      if (h.zg.storage && $('#zg-storage-status')) {
+        $('#zg-storage-status').innerHTML = '<span class="s-ok">●</span> Turbo Galileo';
+      }
+      var latestReq = (h.zg.compute && h.zg.compute.latestRequestId) || (h.zg.latestRecord && h.zg.latestRecord.requestId);
+      if ($('#zg-req-text')) {
+        $('#zg-req-text').textContent = latestReq ? esc(latestReq) : 'None recorded yet';
+        $('#zg-req-copy').innerHTML = latestReq ? copyBtn(latestReq) : '';
+      }
+      var latestRoot = (h.zg.storage && h.zg.storage.latestRootHash) || (h.zg.latestRecord && h.zg.latestRecord.rootHash);
+      if ($('#zg-root-text')) {
+        $('#zg-root-text').textContent = latestRoot ? esc(short(latestRoot, 14, 10)) : 'None recorded yet';
+        $('#zg-root-copy').innerHTML = latestRoot ? copyBtn(latestRoot) : '';
+        if ($('#zg-scan-link')) {
+          if (latestRoot) {
+            $('#zg-scan-link').href = 'https://storagescan.0g.ai/file/' + encodeURIComponent(latestRoot);
+            $('#zg-scan-link').hidden = false;
+          } else {
+            $('#zg-scan-link').hidden = true;
+          }
+        }
+      }
     }
     var ix = h.indexer || {};
     $('#kpi-indexer').innerHTML = ix.synced ? '<span class="s-ok">●</span> Synced · block ' + esc(ix.cursor) : '<span class="s-pending">●</span> Syncing' + (ix.cursor >= 0 ? ' · ' + esc(ix.cursor) : '');
@@ -618,8 +650,8 @@
     return '<div class="panel-head"><h2>Plan</h2>' +
       (p.requiresBiometric2FA ? '<span class="status-pill s-warn">Needs World ID</span>' : '<span class="status-pill s-ok">Runs automatically</span>') +
       '</div>' +
-      '<p class="plan-summary"><span class="mode-pill' + (p.planner === 'claude' ? ' is-onchain' : '') + '">' +
-        (p.planner === 'claude' ? 'Claude · ' + esc(p.plannerModel || '') : 'Rules') + '</span> ' + esc(p.summary) + '</p>' +
+      '<p class="plan-summary"><span class="mode-pill' + (p.planner === '0g' || p.planner === 'claude' ? ' is-onchain' : '') + '">' +
+        (p.planner === '0g' ? '0G Private Compute · ' + esc(p.plannerModel || '') : (p.planner === 'claude' ? 'Claude · ' + esc(p.plannerModel || '') : 'Rules')) + '</span> ' + esc(p.summary) + '</p>' +
       '<div class="route">' +
         '<div class="route-side"><span class="route-amt">' + usd(p.amountIn) + '</span><span class="route-sym">' + esc(p.tokenInSymbol) + '</span></div>' +
         '<div class="route-arrow"></div>' +
@@ -629,6 +661,8 @@
       (p.riskNotes && p.riskNotes.length ? '<div class="risk"><strong>Risk notes</strong>' + list(p.riskNotes, 'rationale') + '</div>' : '') +
       '<dl class="kv" style="margin-top:16px">' +
         '<dt>Agent</dt><dd>' + (p.agentSubname ? esc(p.agentSubname) : '<span class="s-err">Not registered</span>') + '</dd>' +
+        (p.zgRequestId ? '<dt>0G Request ID</dt><dd class="mono">' + esc(p.zgRequestId) + ' ' + copyBtn(p.zgRequestId) + '</dd>' : '') +
+        (p.zgStorageRootHash ? '<dt>0G Storage Root</dt><dd class="mono">' + esc(short(p.zgStorageRootHash, 12, 8)) + ' ' + copyBtn(p.zgStorageRootHash) + (p.zgStorageExplorerUrl ? ' <a href="' + esc(p.zgStorageExplorerUrl) + '" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" style="font-size:0.75rem;padding:2px 6px;margin-left:6px;">0G Scan ↗</a>' : '') + '</dd>' : '') +
         '<dt>Onchain check</dt><dd>' + (p.authorization
           ? (p.authorization.isAllowed ? '<span class="s-ok">Authorized</span>' : '<span class="s-err">Not authorized</span>')
           : '<span class="hint">Not checked</span>') + '</dd>' +
@@ -648,7 +682,10 @@
     var d = formData(form);
     if (!isAddress(d.agentAddress)) return toast('Enter a valid 0x agent address.', 'err');
 
-    busy(btn, true, state.health && state.health.ai && state.health.ai.enabled ? 'Claude is planning…' : 'Planning…');
+    var planningText = state.health && state.health.ai && state.health.ai.provider === '0g'
+      ? '0G Private Compute is planning…'
+      : (state.health && state.health.ai && state.health.ai.enabled ? 'Claude is planning…' : 'Planning…');
+    busy(btn, true, planningText);
     propose(d).then(function (res) {
       var panel = $('#proposal');
       panel.innerHTML = renderProposal(res);
@@ -659,6 +696,10 @@
         updateGateHint();
       });
     }).catch(function (err) {
+      var panel = $('#proposal');
+      panel.innerHTML = '<div class="panel-head"><h2>Plan Failed Safe</h2><span class="status-pill s-err">Fail-Safe Active</span></div>' +
+        '<div class="risk" style="margin-top:12px"><strong>0G Decentralized Guardrail Notice</strong><p style="margin-top:6px;color:#f87171">' + esc(err.message) + '</p>' +
+        '<p class="hint" style="margin-top:8px">Under AegisNet fail-safe protocol, no speculative or fake trade decisions are generated when 0G Private Compute or 0G Storage cannot cryptographically verify the route.</p></div>';
       toast(err.message, 'err');
     }).then(function () { busy(btn, false); });
   });
@@ -1074,17 +1115,23 @@
 
     var body = $('#activity-body');
     if (!list.length) {
-      body.innerHTML = '<tr><td colspan="7" class="empty">' + (onlyMine ? 'No trades from your agents yet. Run one from <a class="addr-link" href="#execute">Trade</a>.' : 'No trades on the contract yet.') + '</td></tr>';
+      body.innerHTML = '<tr><td colspan="8" class="empty">' + (onlyMine ? 'No trades from your agents yet. Run one from <a class="addr-link" href="#execute">Trade</a>.' : 'No trades on the contract yet.') + '</td></tr>';
     } else {
       body.innerHTML = list.map(function (r) {
         var txs = [txLink(r.txHash, 'request'), r.verificationTxHash ? txLink(r.verificationTxHash, 'approval') : '',
           r.executionTxHash && r.executionTxHash !== r.txHash ? txLink(r.executionTxHash, 'execution') : '',
           r.cancelTxHash ? txLink(r.cancelTxHash, 'cancel') : ''].filter(Boolean).join(' · ');
+        var zgCell = r.zgStorageRootHash
+          ? '<span class="mono" title="' + esc(r.zgStorageRootHash) + '">' +
+            esc(short(r.zgStorageRootHash, 8, 6)) + ' ' + copyBtn(r.zgStorageRootHash) +
+            ' <a class="btn btn-ghost btn-sm" href="https://storagescan.0g.ai/file/' + encodeURIComponent(r.zgStorageRootHash) + '" target="_blank" rel="noopener" style="font-size:0.75rem;padding:2px 4px;margin-left:4px;">0G</a></span>'
+          : '<span class="hint">—</span>';
         return '<tr>' +
           '<td class="mono" title="' + esc(r.requestId) + '">' + esc(short(r.requestId, 10, 6)) + ' ' + copyBtn(r.requestId) + '</td>' +
           '<td>' + (r.agentSubname ? esc(r.agentSubname) : addrLink(r.agentAddress)) + '</td>' +
           '<td>' + usd(r.valueUSD) + '</td>' +
           '<td>' + pill(r.status) + '</td>' +
+          '<td>' + zgCell + '</td>' +
           '<td>' + txs + '</td>' +
           '<td class="hint" title="' + esc(r.updatedAt) + '">' + timeAgo(r.updatedAt) + '</td>' +
           '<td><div class="row-actions">' + actionsFor(r) + '</div></td>' +

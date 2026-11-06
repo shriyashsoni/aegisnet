@@ -154,6 +154,40 @@
       </ol>
     </div>
 
+    <!-- ================= 0G PROOF PANEL ================= -->
+    <div class="panel zg-proof-panel" id="zg-proof-panel" style="margin-bottom: 24px; border: 1px solid rgba(99, 102, 241, 0.35); background: rgba(99, 102, 241, 0.03);">
+      <div class="panel-head">
+        <h2><span style="color: #818cf8; font-weight: 700;">0G</span> Decentralized AI &amp; Storage Proof</h2>
+        <span class="mode-pill is-onchain" id="zg-badge">0G Verifiable Network</span>
+      </div>
+      <p class="lede" style="font-size: 0.95rem; margin-bottom: 16px; color: var(--text-dim, #888);">
+        Verifiable TEE-attested AI strategy planning via <strong>0G Private Compute</strong> and immutable trade decision records published to <strong>0G Storage</strong>.
+      </p>
+      <div class="kpis">
+        <div class="kpi">
+          <span class="kpi-label">0G Compute Planner</span>
+          <span class="kpi-value" id="zg-planner-model">0gm-1.0-35b-a3b</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">0G Storage Indexer</span>
+          <span class="kpi-value" id="zg-storage-status"><span class="s-ok">●</span> Turbo Testnet</span>
+        </div>
+      </div>
+      <dl class="kv" style="margin-top: 14px;">
+        <dt>Latest 0G Request ID</dt>
+        <dd class="mono" id="zg-latest-request">
+          <span id="zg-req-text">—</span>
+          <span id="zg-req-copy"></span>
+        </dd>
+        <dt>Latest 0G Storage Root</dt>
+        <dd class="mono" id="zg-latest-root">
+          <span id="zg-root-text">—</span>
+          <span id="zg-root-copy"></span>
+          <a class="btn btn-ghost btn-sm" id="zg-scan-link" href="https://storagescan.0g.ai" target="_blank" rel="noopener" style="margin-left: 8px; font-size: 0.75rem;" hidden>View on 0G Scan ↗</a>
+        </dd>
+      </dl>
+    </div>
+
     <div class="grid-2">
       <div class="panel">
         <div class="panel-head"><h2>My agent</h2><span class="status-pill" id="agent-status" hidden></span></div>
@@ -447,8 +481,8 @@
     <div class="panel panel--flush">
       <div class="table-wrap">
         <table class="table">
-          <thead><tr><th>Request</th><th>Agent</th><th>Value</th><th>Status</th><th>Transactions</th><th>When</th><th></th></tr></thead>
-          <tbody id="activity-body"><tr><td colspan="7" class="empty">Loading onchain activity…</td></tr></tbody>
+          <thead><tr><th>Request</th><th>Agent</th><th>Value</th><th>Status</th><th>0G Storage Root</th><th>Transactions</th><th>When</th><th></th></tr></thead>
+          <tbody id="activity-body"><tr><td colspan="8" class="empty">Loading onchain activity…</td></tr></tbody>
         </table>
       </div>
     </div>
