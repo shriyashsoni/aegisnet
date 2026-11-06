@@ -1,0 +1,41 @@
+{
+  "network": "sepolia",
+  "chainId": "11155111",
+  "timestamp": "2026-11-06T11:16:27.550Z",
+  "contracts": {
+    "AegisSubnameRegistry": "0x815893baD1708a201eEEAF226eeD576A7Ffea4BC",
+    "AegisExecutionManager": "0x8d5b392839300b487adDeeCc35F5BC534111CD33",
+    "AegisUniswapAdapter": "0xAaD03d978d84ccA70125F998b61ff7b539F565f4",
+    "AegisSwapVMAdapter": "0xbd9e58d4a0e5987BC26f7898f9f66043bf9716C5"
+  },
+  "flows": {
+    "lowValueAutoSwap": {
+      "amountUSD": "0.30",
+      "thresholdUSD": "1.00",
+      "txHash": "0x79640a20abab184f469218c0774b4c809e1944f3fe6bcab771f21f42ffccb0dd",
+      "etherscan": "https://sepolia.etherscan.io/tx/0x79640a20abab184f469218c0774b4c809e1944f3fe6bcab771f21f42ffccb0dd",
+      "status": "AUTO_EXECUTED"
+    },
+    "highValueApprovedSwap": {
+      "amountUSD": "3.00",
+      "thresholdUSD": "1.00",
+      "requestTx": "0xd530468647deee80ddb3a3a4836894aa1b08b4d28159eb313dfcc47ebda32f42",
+      "approveTx": "0x6d7a5084f3b842d5bf0280b9b38928429d4c9853966a3fb8fa722cf4679ca596",
+      "etherscan": "https://sepolia.etherscan.io/tx/0x6d7a5084f3b842d5bf0280b9b38928429d4c9853966a3fb8fa722cf4679ca596",
+      "nullifier": "91013010515072223684303406903413453891889260878856199096128299809585933499808",
+      "status": "WORLD_ID_APPROVED_AND_EXECUTED"
+    },
+    "deniedTradeCancelled": {
+      "amountUSD": "3.00",
+      "requestTx": "0xc28a74fe8c8e9b7ca83d0892006a6f8769c2cb5f56621bbb9ced60fa45d3bb65",
+      "cancelTx": "0xaea034effa80f025a480c9e0754704c32558ae1291111075717acf07a9a835a2",
+      "etherscan": "https://sepolia.etherscan.io/tx/0xaea034effa80f025a480c9e0754704c32558ae1291111075717acf07a9a835a2",
+      "status": "CANCELLED_UNEXECUTED"
+    },
+    "expiredTradeRejection": {
+      "requestId": "0x428e6feccb66c567acffb0909bcea55e85e1e93865c448ce67fd79e8491a1209",
+      "revertReason": "AegisManager: deadline expired",
+      "status": "REVERTED_UNEXECUTED"
+    }
+  }
+}
