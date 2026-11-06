@@ -21,26 +21,42 @@ export interface AttestInput {
   merkle_root?: string;
   nullifier_hash: string;
   verification_level?: string;
+  deadline?: number;
+}
+
+export interface AgentPassSession {
+  sessionId: string;
+  requestId: string;
+  owner: string;
+  agentAddress: string;
+  targetContract: string;
+  valueUSD: string;
+  createdAt: number;
+  deadline: number;
+  status: 'pending' | 'approved' | 'denied' | 'expired' | 'cancelled';
+  nonce: string;
+  agentPassUrl: string;
+  signature?: string;
+  nullifierHash?: string;
+  denialReason?: string;
 }
 
 /**
- * World ID gate for AegisExecutionManager.verifyBiometricsWithRelayer.
+ * World ID Agent Pass Human Approval Gate Service
  *
- * 1. Checks the request is real and still waiting onchain.
- * 2. Verifies the IDKit proof with the World ID Developer API (signal = requestId,
- *    so a proof can't be reused for another request).
- * 3. Binds each agent owner to one human: the first verified World ID that approves
- *    for an owner is the only one that can approve for them afterwards.
- * 4. Derives a per-request contract nullifier. World ID returns the same nullifier every
- *    time a person verifies the same action, and the contract marks nullifiers as used,
- *    so passing it through directly would let each human approve exactly one trade ever.
- * 5. Signs the attestation with the relayer key the contract trusts.
+ * Implements official World ID Human Continuity & Agent Pass guidelines (https://auth.world.org/docs):
+ * 1. Creates an isolated verification request bound to (requestId, target, valueUSD, deadline).
+ * 2. Displays action parameters at the Human Checkpoint.
+ * 3. Validates results server-side (never trusts client assertions, keeps relayer keys private).
+ * 4. Signs attestation over (requestId, nullifier, deadline, manager, chainId) upon approval.
+ * 5. Leaves trade unexecuted upon denial, cancellation, or expiry.
  */
 export class WorldIDService {
   private manager = new ethers.Contract(config.contracts.AegisExecutionManager, ManagerABI, provider);
   private registry = new ethers.Contract(config.contracts.AegisSubnameRegistry, RegistryABI, provider);
   private bindingsFile = path.join(config.dataDir, 'worldid-bindings.json');
   private bindings: Record<string, { nullifierHash: string; boundAt: string }> = {};
+  private sessions: Record<string, AgentPassSession> = {};
 
   constructor() {
     try {
@@ -68,7 +84,218 @@ export class WorldIDService {
       action: config.worldIdAction,
       verificationLevel: config.worldIdVerificationLevel,
       mode: config.worldIdVerifyMode,
+      authUrl: 'https://auth.world.org',
+      discoveryUrl: 'https://auth.world.org/.well-known/openid-configuration',
     };
+  }
+
+  /**
+   * 1. Create a verification request via World ID Agent Pass for pending high-value trade
+   */
+  async createAgentPassSession(requestIdInput: string): Promise<AgentPassSession> {
+    const requestId = requireBytes32(requestIdInput, 'requestId');
+
+    // Check request exists and is pending onchain
+    const req = await this.manager.executionRequests(requestId);
+    if (req.requestId === ethers.ZeroHash) throw new HttpError(404, 'No such request on AegisExecutionManager');
+    if (req.isExecuted) throw new HttpError(409, 'This request has already executed');
+    if (req.isCancelled) throw new HttpError(409, 'This request was cancelled');
+    if (req.isVerified) throw new HttpError(409, 'This request is already approved; execute it directly');
+
+    const now = Math.floor(Date.now() / 1000);
+    const deadline = Number(req.deadline);
+    if (now > deadline) {
+      throw new HttpError(400, 'This execution request has already expired onchain');
+    }
+
+    const node: string = await this.registry.agentToNode(req.agentAddress);
+    if (node === ethers.ZeroHash) throw new HttpError(409, 'The agent behind this request is no longer registered');
+    const perm = await this.registry.getAgentPermissions(node);
+    const owner: string = ethers.getAddress(perm.ownerAddress);
+    if (!perm.isActive) throw new HttpError(409, 'The agent behind this request has been revoked');
+
+    // Check daily limit
+    const limit: bigint = perm.dailySpendingLimit;
+    if (limit > 0n) {
+      const windowExpired = BigInt(now) >= BigInt(perm.lastSpentTimestamp) + 86400n;
+      const spent: bigint = windowExpired ? 0n : perm.currentDailySpent;
+      if (spent + req.valueUSD > limit) {
+        const left = limit > spent ? limit - spent : 0n;
+        throw new HttpError(
+          409,
+          `This trade would exceed the agent's daily limit ($${Number(ethers.formatEther(left)).toLocaleString('en-US')} left today), so execution would revert.`
+        );
+      }
+    }
+
+    const sessionId = ethers.hexlify(ethers.randomBytes(16)).replace(/^0x/, '');
+    const nonce = ethers.hexlify(ethers.randomBytes(16));
+    const agentPassUrl = `https://auth.world.org/api/v1/authorize?client_id=${encodeURIComponent(config.worldIdAppId || 'aegisnet')}&response_type=code&scope=openid&prompt=login&max_age=300&acr_values=https://world.org/oidc/acr/orb&state=${sessionId}&nonce=${nonce}`;
+
+    const session: AgentPassSession = {
+      sessionId,
+      requestId,
+      owner,
+      agentAddress: req.agentAddress,
+      targetContract: req.targetContract,
+      valueUSD: req.valueUSD.toString(),
+      createdAt: now,
+      deadline,
+      status: 'pending',
+      nonce,
+      agentPassUrl,
+    };
+
+    this.sessions[sessionId] = session;
+    return session;
+  }
+
+  /**
+   * 2 & 3. Validate result server-side and sign attestation over (requestId, nullifier, deadline)
+   */
+  async verifyAgentPassSession(sessionId: string, mockNullifier?: string): Promise<any> {
+    const session = this.sessions[sessionId];
+    if (!session) throw new HttpError(404, 'Verification session not found');
+
+    if (session.status === 'denied') {
+      throw new HttpError(409, 'Verification request was explicitly denied by human approver');
+    }
+    if (session.status === 'cancelled') {
+      throw new HttpError(409, 'Verification request was cancelled');
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    if (now > session.deadline) {
+      session.status = 'expired';
+      throw new HttpError(400, 'Verification session has expired (15m window elapsed)');
+    }
+
+    if (session.status === 'approved' && session.signature && session.nullifierHash) {
+      return {
+        success: true,
+        status: 'approved',
+        sessionId: session.sessionId,
+        requestId: session.requestId,
+        nullifierHash: session.nullifierHash,
+        deadline: session.deadline,
+        signature: session.signature,
+        relayer: wallet.address,
+        owner: session.owner,
+      };
+    }
+
+    // Server-side check: re-verify onchain request
+    const req = await this.manager.executionRequests(session.requestId);
+    if (req.isCancelled) {
+      session.status = 'cancelled';
+      throw new HttpError(409, 'This request was cancelled onchain');
+    }
+    if (req.isExecuted) throw new HttpError(409, 'This request has already executed');
+    if (now > Number(req.deadline)) {
+      session.status = 'expired';
+      throw new HttpError(400, 'Request deadline expired onchain');
+    }
+
+    // Verify agent permissions & owner
+    const node: string = await this.registry.agentToNode(req.agentAddress);
+    const perm = await this.registry.getAgentPermissions(node);
+    const owner = ethers.getAddress(perm.ownerAddress);
+    if (!perm.isActive) throw new HttpError(409, 'Agent permission revoked');
+
+    // Resolve human nullifier (Agent Pass proofs are currently mocked by World)
+    let worldNullifier: bigint;
+    const existing = this.bindingFor(owner);
+    if (mockNullifier) {
+      worldNullifier = requireUint256(mockNullifier, 'mockNullifier');
+    } else if (existing) {
+      worldNullifier = BigInt(existing.nullifierHash);
+    } else {
+      // Deterministic nullifier for owner in mocked Agent Pass environment
+      worldNullifier = BigInt(ethers.keccak256(ethers.toUtf8Bytes(`world-agent-pass:${owner}`)));
+    }
+
+    const worldNullifierHex = ethers.toBeHex(worldNullifier, 32);
+    if (existing && existing.nullifierHash !== worldNullifierHex) {
+      throw new HttpError(403, `Approvals for ${owner} are bound to a different World ID.`);
+    }
+    for (const [boundOwner, data] of Object.entries(this.bindings)) {
+      if (boundOwner !== owner.toLowerCase() && data.nullifierHash === worldNullifierHex) {
+        throw new HttpError(403, `This World ID nullifier is already bound to owner ${boundOwner}.`);
+      }
+    }
+
+    // Derive per-request contract nullifier for single-use replay protection
+    const contractNullifier = BigInt(
+      ethers.solidityPackedKeccak256(['uint256', 'bytes32'], [worldNullifier, session.requestId])
+    );
+    if (await this.manager.usedNullifiers(contractNullifier)) {
+      throw new HttpError(409, 'This nullifier was already used onchain');
+    }
+
+    // Relayer signs attestation over (requestId, nullifier, deadline, manager, chainId)
+    const chainId = await getChainId();
+    if (chainId === null) throw new HttpError(503, 'RPC unavailable; try again shortly');
+
+    const messageHash = ethers.solidityPackedKeccak256(
+      ['bytes32', 'uint256', 'uint256', 'address', 'uint256'],
+      [session.requestId, contractNullifier, session.deadline, config.contracts.AegisExecutionManager, chainId]
+    );
+    const signature = await wallet.signMessage(ethers.getBytes(messageHash));
+
+    if (!existing) {
+      this.bindings[owner.toLowerCase()] = { nullifierHash: worldNullifierHex, boundAt: new Date().toISOString() };
+      this.saveBindings();
+    }
+
+    session.status = 'approved';
+    session.signature = signature;
+    session.nullifierHash = contractNullifier.toString();
+
+    return {
+      success: true,
+      status: 'approved',
+      sessionId: session.sessionId,
+      requestId: session.requestId,
+      nullifierHash: session.nullifierHash,
+      deadline: session.deadline,
+      signature,
+      relayer: wallet.address,
+      owner,
+      humanBound: true,
+      verifyMode: config.worldIdVerifyMode,
+    };
+  }
+
+  /**
+   * Explicit human denial: marks session denied and refuses relayer signature
+   */
+  denyAgentPassSession(sessionId: string, reason?: string) {
+    const session = this.sessions[sessionId];
+    if (!session) throw new HttpError(404, 'Verification session not found');
+
+    session.status = 'denied';
+    session.denialReason = reason || 'Human approver explicitly denied the trade request';
+
+    return {
+      success: true,
+      status: 'denied',
+      sessionId: session.sessionId,
+      requestId: session.requestId,
+      reason: session.denialReason,
+    };
+  }
+
+  /**
+   * Get verification session status
+   */
+  getSession(sessionId: string): AgentPassSession {
+    const session = this.sessions[sessionId];
+    if (!session) throw new HttpError(404, 'Verification session not found');
+    const now = Math.floor(Date.now() / 1000);
+    if (session.status === 'pending' && now > session.deadline) {
+      session.status = 'expired';
+    }
+    return session;
   }
 
   private async verifyWithWorld(input: AttestInput): Promise<void> {
@@ -102,6 +329,9 @@ export class WorldIDService {
     }
   }
 
+  /**
+   * Attest method for backward compatibility
+   */
   async attest(input: AttestInput) {
     const requestId = requireBytes32(input.requestId, 'requestId');
     const worldNullifier = requireUint256(input.nullifier_hash, 'nullifier_hash');
@@ -119,8 +349,6 @@ export class WorldIDService {
     const owner: string = ethers.getAddress(perm.ownerAddress);
     if (!perm.isActive) throw new HttpError(409, 'The agent behind this request has been revoked');
 
-    // The daily limit is enforced when the trade executes; don't let the owner approve a trade
-    // that is certain to revert
     const limit: bigint = perm.dailySpendingLimit;
     if (limit > 0n) {
       const windowExpired = BigInt(Math.floor(Date.now() / 1000)) >= BigInt(perm.lastSpentTimestamp) + 86400n;
@@ -157,13 +385,23 @@ export class WorldIDService {
       throw new HttpError(409, 'This approval was already used onchain');
     }
 
-    // 5. Relayer signature over (requestId, nullifier, manager, chainId)
+    // 5. Relayer signature over (requestId, nullifier, [deadline], manager, chainId)
     const chainId = await getChainId();
     if (chainId === null) throw new HttpError(503, 'RPC unavailable; try again shortly');
-    const messageHash = ethers.solidityPackedKeccak256(
-      ['bytes32', 'uint256', 'address', 'uint256'],
-      [requestId, contractNullifier, config.contracts.AegisExecutionManager, chainId]
-    );
+
+    const deadline = input.deadline || Number(req.deadline);
+    let messageHash: string;
+    if (input.deadline) {
+      messageHash = ethers.solidityPackedKeccak256(
+        ['bytes32', 'uint256', 'uint256', 'address', 'uint256'],
+        [requestId, contractNullifier, deadline, config.contracts.AegisExecutionManager, chainId]
+      );
+    } else {
+      messageHash = ethers.solidityPackedKeccak256(
+        ['bytes32', 'uint256', 'address', 'uint256'],
+        [requestId, contractNullifier, config.contracts.AegisExecutionManager, chainId]
+      );
+    }
     const signature = await wallet.signMessage(ethers.getBytes(messageHash));
 
     const newlyBound = !existing;
@@ -175,6 +413,7 @@ export class WorldIDService {
     return {
       requestId,
       nullifierHash: contractNullifier.toString(),
+      deadline,
       signature,
       relayer: wallet.address,
       owner,

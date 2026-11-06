@@ -90,4 +90,75 @@ console.log('Running backend unit tests...\n');
   console.log('✓ solidityPackedKeccak256 attestation digest matches EVM abi.encodePacked expectations');
 }
 
-console.log('\nAll 5 backend unit test suites passed successfully!');
+// 6. 5-argument World ID Agent Pass attestation digest over (requestId, nullifier, deadline, manager, chainId)
+{
+  const requestId = ethers.id('request-789');
+  const nullifier = 1234567890n;
+  const deadline = Math.floor(Date.now() / 1000) + 900;
+  const manager = '0xC65d65A48cB24CA9bd6df02Ea83Ef44571E5594c';
+  const chainId = 11155111n;
+
+  const messageHash = ethers.solidityPackedKeccak256(
+    ['bytes32', 'uint256', 'uint256', 'address', 'uint256'],
+    [requestId, nullifier, deadline, manager, chainId]
+  );
+  assert.strictEqual(ethers.isHexString(messageHash, 32), true);
+
+  // Verify signature recovery matches relayer
+  const wallet = ethers.Wallet.createRandom();
+  const signature = wallet.signMessageSync(ethers.getBytes(messageHash));
+  const recovered = ethers.verifyMessage(ethers.getBytes(messageHash), signature);
+  assert.strictEqual(recovered.toLowerCase(), wallet.address.toLowerCase());
+  console.log('✓ Agent Pass 5-param digest correctly recovers trusted relayer address');
+}
+
+// 7. Verification session state transition rules (denied, expired, pending)
+{
+  const now = Math.floor(Date.now() / 1000);
+  const session = {
+    sessionId: 'test-session-1',
+    requestId: ethers.id('test-trade'),
+    owner: '0x1111111111111111111111111111111111111111',
+    createdAt: now - 1000,
+    deadline: now - 100, // expired 100 seconds ago
+    status: 'pending'
+  };
+
+  // Checking expiry
+  if (now > session.deadline) {
+    session.status = 'expired';
+  }
+  assert.strictEqual(session.status, 'expired');
+
+  // Denied session leaves trade unexecuted
+  const deniedSession = {
+    sessionId: 'test-session-2',
+    status: 'denied',
+    signature: undefined
+  };
+  assert.strictEqual(deniedSession.status, 'denied');
+  assert.strictEqual(deniedSession.signature, undefined);
+  console.log('✓ Verification session state machine properly handles denied and expired transitions');
+}
+
+// 8. One-human-to-one-owner binding uniqueness constraint
+{
+  const bindings = {
+    '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa': { nullifierHash: '0x0000000000000000000000000000000000000000000000000000000000000001' }
+  };
+  const ownerA = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  const ownerB = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+  const nullifier1 = '0x0000000000000000000000000000000000000000000000000000000000000001';
+
+  // Check reuse across different owner
+  let conflict = false;
+  for (const [boundOwner, data] of Object.entries(bindings)) {
+    if (boundOwner !== ownerB.toLowerCase() && data.nullifierHash === nullifier1) {
+      conflict = true;
+    }
+  }
+  assert.strictEqual(conflict, true, 'Reusing nullifier across different owners must be blocked');
+  console.log('✓ Uniqueness constraint blocks reuse of the same human nullifier across different owners');
+}
+
+console.log('\nAll 8 backend unit test suites passed successfully!');

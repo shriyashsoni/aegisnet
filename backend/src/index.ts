@@ -109,7 +109,6 @@ app.use('/api', (_req, _res, next) => next(new HttpError(404, 'API route not fou
 const backendRoot = path.resolve(__dirname, '..');
 const vendor: Record<string, string> = {
   'ethers.umd.min.js': path.join(backendRoot, 'node_modules/ethers/dist/ethers.umd.min.js'),
-  'idkit.js': path.join(backendRoot, 'node_modules/@worldcoin/idkit-standalone/build/index.global.js'),
 };
 app.get('/vendor/:file', (req, res, next) => {
   const file = vendor[req.params.file];
