@@ -166,7 +166,23 @@ async function main() {
   console.log(`Requires Biometrics: ${parsedReqEvent.args.requiresBiometrics}`);
 
   console.log("\nSimulating World ID Agent Pass Verification via Relayer...");
-  const nullifierHash = 987654321;
+  // Decoupled relayer signing (supports RELAYER_PRIVATE_KEY or falls back to deployer for local mocks)
+  const relayerSigner = process.env.RELAYER_PRIVATE_KEY && !process.env.RELAYER_PRIVATE_KEY.includes("YOUR_")
+    ? new ethers.Wallet(process.env.RELAYER_PRIVATE_KEY, ethers.provider)
+    : deployer;
+  console.log(`Relayer Signer: ${relayerSigner.address}`);
+
+  // Resolve human nullifier respecting owner binding and single-use replay protection
+  const boundNullifier = await manager.ownerToNullifier(deployer.address);
+  const baseNullifier = boundNullifier > 0n
+    ? boundNullifier
+    : ethers.toBigInt(ethers.solidityPackedKeccak256(["string", "address"], ["world-id-agent-pass", deployer.address]));
+
+  // Derive per-request contract nullifier for single-use execution protection
+  const nullifierHash = ethers.toBigInt(
+    ethers.solidityPackedKeccak256(["uint256", "bytes32"], [baseNullifier, requestId])
+  );
+
   const managerAddr = contracts.AegisExecutionManager;
   const network = await ethers.provider.getNetwork();
   const latestBlock = await ethers.provider.getBlock("latest");
@@ -176,7 +192,7 @@ async function main() {
     ["bytes32", "uint256", "uint256", "address", "uint256"],
     [requestId, nullifierHash, deadline, managerAddr, network.chainId]
   );
-  const sig = await deployer.signMessage(ethers.getBytes(messageHash));
+  const sig = await relayerSigner.signMessage(ethers.getBytes(messageHash));
 
   console.log("Submitting World ID Agent Pass attestation & atomically executing on Sepolia...");
   const approveTx = await manager["approveWithRelayer(bytes32,uint256,uint256,bytes)"](
@@ -186,7 +202,7 @@ async function main() {
     sig
   );
   await approveTx.wait();
-  console.log(`🎉 High-value 1inch Aqua transaction approved & executed on Sepolia! Tx: ${approveTx.hash}`);
+  console.log(`🎉 High-value transaction approved & executed! Tx: ${approveTx.hash}`);
 
   // -------------------------------------------------------------
   // PHASE IV: Uniswap V3 Execution Adapter Verification
