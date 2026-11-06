@@ -76,10 +76,12 @@ code { font-family: var(--mono); font-size: 0.9em; }
 
 /* ---------- Layers ---------- */
 .grain {
-  position: fixed; inset: 0; z-index: 100; pointer-events: none; opacity: 0.06; mix-blend-mode: overlay;
+  position: fixed; inset: 0; z-index: 100; pointer-events: none; opacity: 0.04;
   background-image:
-    repeating-radial-gradient(circle at 17% 32%, rgba(255,255,255,0.5) 0 0.5px, transparent 0.5px 2px),
-    repeating-radial-gradient(circle at 73% 68%, rgba(255,255,255,0.4) 0 0.5px, transparent 0.5px 3px);
+    repeating-radial-gradient(circle at 17% 32%, rgba(255,255,255,0.4) 0 0.5px, transparent 0.5px 2px),
+    repeating-radial-gradient(circle at 73% 68%, rgba(255,255,255,0.3) 0 0.5px, transparent 0.5px 3px);
+  contain: strict;
+  transform: translateZ(0);
 }
 
 .hero-photo {
@@ -88,10 +90,25 @@ code { font-family: var(--mono); font-size: 0.9em; }
   height: 100vh; height: 100dvh;
   z-index: 0;
   overflow: hidden;
-  background: #000;
+  background: radial-gradient(circle at 50% 25%, rgba(99, 102, 241, 0.28) 0%, rgba(139, 92, 246, 0.14) 35%, rgba(5, 5, 8, 0.98) 75%);
   animation: in-photo 1.6s var(--ease) both;
+  transform: translateZ(0);
 }
-.hero-photo video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(5, 5, 8, 0.15) 0%, rgba(5, 5, 8, 0.65) 60%, rgba(5, 5, 8, 1) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+.hero-photo video {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  opacity: 0;
+  transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateZ(0);
+}
+.hero-photo video.is-playing { opacity: 0.85; }
 .hero-photo.is-in { animation: none; opacity: 1; transform: none; clip-path: none; filter: none; }
 
 .page {
@@ -428,8 +445,18 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
 .appear.is-in { animation: none; opacity: 1; transform: none; clip-path: none; filter: none; }
 
 /* Scroll reveal: only hides when JS is running, so content never disappears without it */
-.js .reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.9s var(--ease), transform 0.9s var(--ease); transition-delay: var(--rd, 0s); }
-.js .reveal.is-visible { opacity: 1; transform: none; }
+.js .reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.9s var(--ease), transform 0.9s var(--ease);
+  transition-delay: var(--rd, 0s);
+  will-change: opacity, transform;
+}
+.js .reveal.is-visible {
+  opacity: 1;
+  transform: none;
+  will-change: auto;
+}
 .js .card.reveal.is-visible { transition: opacity 0.9s var(--ease), transform 0.35s var(--ease), border-color 0.35s ease, box-shadow 0.35s ease; }
 .js .card.reveal.is-visible:hover { transform: translateY(-2px); }
 
@@ -570,8 +597,9 @@ body.menu-open .burger span:nth-child(3) { transform: translateY(-6.5px) rotate(
 <div class="grain" aria-hidden="true"></div>
 
 <div class="hero-photo" aria-hidden="true">
-  <video autoplay muted loop playsinline preload="auto"
-    src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260818_072341_50851634-bbc3-4c33-9acc-7647d4db44aa.mp4"></video>
+  <video id="hero-video" autoplay muted loop playsinline webkit-playsinline x5-playsinline x5-video-player-type="h5" x5-video-player-fullscreen="true" disablePictureInPicture preload="auto" poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080'%3E%3Cdefs%3E%3CradialGradient id='g' cx='50%25' cy='30%25' r='60%25'%3E%3Cstop offset='0%25' stop-color='%236366f1' stop-opacity='0.35'/%3E%3Cstop offset='45%25' stop-color='%238b5cf6' stop-opacity='0.15'/%3E%3Cstop offset='100%25' stop-color='%23050508' stop-opacity='1'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='%23050508'/%3E%3Crect width='100%25' height='100%25' fill='url(%23g)'/%3E%3C/svg%3E">
+    <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260818_072341_50851634-bbc3-4c33-9acc-7647d4db44aa.mp4" type="video/mp4">
+  </video>
 </div>
 
 <div class="menu-backdrop" aria-hidden="true"></div>
@@ -1018,20 +1046,77 @@ npm start   # → http://localhost:4000</code></li>
     reveals.forEach(function (el) { el.classList.add('is-visible'); });
   }
 
-  // ---- Header state + current section ----
+  // ---- Background video robust playback & fallback ----
+  var heroVideo = document.getElementById('hero-video');
+  if (heroVideo) {
+    heroVideo.muted = true;
+    heroVideo.defaultMuted = true;
+    heroVideo.playsInline = true;
+
+    function markVideoPlaying() {
+      heroVideo.classList.add('is-playing');
+    }
+
+    if (heroVideo.readyState >= 2 && !heroVideo.paused) {
+      markVideoPlaying();
+    } else {
+      heroVideo.addEventListener('playing', markVideoPlaying, { once: true });
+      heroVideo.addEventListener('canplay', function () {
+        if (!heroVideo.classList.contains('is-playing') && !heroVideo.paused) {
+          markVideoPlaying();
+        }
+      });
+    }
+
+    var playAttempt = heroVideo.play();
+    if (playAttempt !== undefined) {
+      playAttempt.then(function () {
+        markVideoPlaying();
+      }).catch(function () {
+        // Autoplay blocked by browser policy (e.g. low-power mode, battery saver, strict mobile policy)
+        // Resume seamlessly on first touch / interaction
+        var kickPlay = function () {
+          heroVideo.play().then(markVideoPlaying).catch(function () {});
+          ['touchstart', 'click', 'scroll', 'keydown'].forEach(function (evt) {
+            window.removeEventListener(evt, kickPlay);
+          });
+        };
+        ['touchstart', 'click', 'scroll', 'keydown'].forEach(function (evt) {
+          window.addEventListener(evt, kickPlay, { passive: true, once: true });
+        });
+      });
+    }
+  }
+
+  // ---- Header state + current section (rAF-throttled for 60fps) ----
   var header = document.querySelector('.header');
   var navLinks = Array.prototype.slice.call(document.querySelectorAll('#site-nav a'));
   var sections = navLinks.map(function (a) { return document.querySelector(a.getAttribute('href')); });
 
-  function onScroll() {
-    header.classList.toggle('is-scrolled', window.scrollY > 12);
-    var mark = window.scrollY + window.innerHeight * 0.35;
+  var scrollTicking = false;
+  function updateScroll() {
+    scrollTicking = false;
+    var scrollY = window.pageYOffset || document.documentElement.scrollTop;
+    if (header) header.classList.toggle('is-scrolled', scrollY > 12);
+    var mark = scrollY + window.innerHeight * 0.35;
     var current = -1;
-    sections.forEach(function (s, i) { if (s && s.offsetTop <= mark) current = i; });
-    navLinks.forEach(function (a, i) { a.classList.toggle('is-current', i === current); });
+    for (var i = 0; i < sections.length; i++) {
+      var s = sections[i];
+      if (s && s.offsetTop <= mark) current = i;
+    }
+    for (var j = 0; j < navLinks.length; j++) {
+      navLinks[j].classList.toggle('is-current', j === current);
+    }
+  }
+
+  function onScroll() {
+    if (!scrollTicking) {
+      scrollTicking = true;
+      requestAnimationFrame(updateScroll);
+    }
   }
   window.addEventListener('scroll', onScroll, { passive: true });
-  onScroll();
+  updateScroll();
 
   // ---- Mobile menu ----
   var burger = document.querySelector('.burger');
