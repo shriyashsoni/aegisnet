@@ -150,6 +150,9 @@ AegisNet separates autonomous agent operations from human-in-the-loop authorizat
 - **Relayer signer (Human Approval Gate):** [`0x3C29CC205E4fb3e1cA6C89DECDFE5A5d4e46E799`](https://sepolia.etherscan.io/address/0x3C29CC205E4fb3e1cA6C89DECDFE5A5d4e46E799) (Decoupled from owner key; onchain verified via `AegisExecutionManager.relayerSigner`)
 - **Deployment record:** [`contracts/deployment-config.json`](contracts/deployment-config.json), mirrored to [`backend/src/config/contracts.json`](backend/src/config/contracts.json) and [`frontend/deployment-config.json`](frontend/deployment-config.json)
 
+> [!NOTE]  
+> For full contract architecture, sequence diagrams, function references, and security specifications, see [`CONTRACTS.md`](CONTRACTS.md).
+
 ## 🔗 Live onchain proof
 
 Real transactions on Sepolia, executed through these contracts by agent `agent1.aegisnet.eth`:
