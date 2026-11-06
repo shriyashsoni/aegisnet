@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <radialGradient id="glow" cx="60%" cy="40%" r="55%">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.32" />
+      <stop offset="45%" stop-color="#8b5cf6" stop-opacity="0.16" />
+      <stop offset="100%" stop-color="#050508" stop-opacity="1" />
+    </radialGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.02" />
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#d0d8e8" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7ee2a8" />
+      <stop offset="100%" stop-color="#a9c4ff" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#050508" />
+  <rect width="1200" height="630" fill="url(#glow)" />
+
+  <!-- Grid overlay -->
+  <g opacity="0.08" stroke="#ffffff" stroke-width="1">
+    <line x1="0" y1="105" x2="1200" y2="105" />
+    <line x1="0" y1="210" x2="1200" y2="210" />
+    <line x1="0" y1="315" x2="1200" y2="315" />
+    <line x1="0" y1="420" x2="1200" y2="420" />
+    <line x1="0" y1="525" x2="1200" y2="525" />
+    <line x1="200" y1="0" x2="200" y2="630" />
+    <line x1="400" y1="0" x2="400" y2="630" />
+    <line x1="600" y1="0" x2="600" y2="630" />
+    <line x1="800" y1="0" x2="800" y2="630" />
+    <line x1="1000" y1="0" x2="1000" y2="630" />
+  </g>
+
+  <!-- Logo -->
+  <g transform="translate(100, 90)">
+    <g transform="scale(1.8) translate(0, 0)">
+      <circle cx="7.3" cy="3.2" r="1.45" fill="#ffffff"/>
+      <rect x="5.5" y="4.7" width="3.6" height="14.6" rx="1.8" fill="#ffffff" transform="rotate(-30 12 12)"/>
+      <rect x="14.9" y="4.7" width="3.6" height="14.6" rx="1.8" fill="#ffffff" transform="rotate(-30 12 12)"/>
+      <circle cx="16.7" cy="20.8" r="1.45" fill="#ffffff"/>
+    </g>
+    <text x="56" y="32" font-family="'Inter', -apple-system, sans-serif" font-weight="700" font-size="34" fill="#ffffff" letter-spacing="-0.03em">
+      Aegis<tspan font-weight="400" fill="#a9c4ff">Net</tspan>
+    </text>
+  </g>
+
+  <!-- Event Tag -->
+  <g transform="translate(900, 92)">
+    <rect width="200" height="38" rx="19" fill="#ffffff" fill-opacity="0.08" stroke="#ffffff" stroke-opacity="0.18" />
+    <circle cx="22" cy="19" r="4" fill="#7ee2a8" />
+    <text x="36" y="24" font-family="'Inter', -apple-system, sans-serif" font-size="13" font-weight="500" fill="#e0e0e0">ETHGlobal Mumbai</text>
+  </g>
+
+  <!-- Main Headline -->
+  <text x="100" y="250" font-family="'Inter', -apple-system, sans-serif" font-weight="700" font-size="56" fill="url(#textGrad)" letter-spacing="-0.04em">
+    AI agents trade onchain.
+  </text>
+  <text x="100" y="320" font-family="'Instrument Serif', Georgia, serif" font-style="italic" font-weight="400" font-size="62" fill="#c0cadc" letter-spacing="-0.02em">
+    You approve the big calls.
+  </text>
+
+  <!-- Subtitle -->
+  <text x="100" y="390" font-family="'Inter', -apple-system, sans-serif" font-weight="400" font-size="22" fill="#9a9a9a">
+    Cryptographic guardrails for autonomous DeFi on Ethereum Sepolia.
+  </text>
+
+  <!-- Architecture Cards Container -->
+  <g transform="translate(100, 445)">
+    <!-- Pill 1: 0G Compute -->
+    <rect x="0" y="0" width="225" height="90" rx="12" fill="url(#cardGrad)" stroke="#ffffff" stroke-opacity="0.12" />
+    <text x="24" y="36" font-family="'Inter', -apple-system, sans-serif" font-size="11" font-weight="600" fill="#7ee2a8" letter-spacing="0.05em">PLANNING</text>
+    <text x="24" y="66" font-family="'Inter', -apple-system, sans-serif" font-size="18" font-weight="600" fill="#ffffff">0G Compute</text>
+
+    <!-- Pill 2: World ID -->
+    <rect x="255" y="0" width="235" height="90" rx="12" fill="url(#cardGrad)" stroke="#ffffff" stroke-opacity="0.12" />
+    <text x="24" y="36" font-family="'Inter', -apple-system, sans-serif" font-size="11" font-weight="600" fill="#f2c46b" letter-spacing="0.05em">HUMAN GATE</text>
+    <text x="24" y="66" font-family="'Inter', -apple-system, sans-serif" font-size="18" font-weight="600" fill="#ffffff">World ID Pass</text>
+
+    <!-- Pill 3: Uniswap V3 -->
+    <rect x="520" y="0" width="225" height="90" rx="12" fill="url(#cardGrad)" stroke="#ffffff" stroke-opacity="0.12" />
+    <text x="24" y="36" font-family="'Inter', -apple-system, sans-serif" font-size="11" font-weight="600" fill="#a9c4ff" letter-spacing="0.05em">EXECUTION</text>
+    <text x="24" y="66" font-family="'Inter', -apple-system, sans-serif" font-size="18" font-weight="600" fill="#ffffff">Uniswap V3</text>
+
+    <!-- Pill 4: 0G Storage -->
+    <rect x="775" y="0" width="225" height="90" rx="12" fill="url(#cardGrad)" stroke="#ffffff" stroke-opacity="0.12" />
+    <text x="24" y="36" font-family="'Inter', -apple-system, sans-serif" font-size="11" font-weight="600" fill="#7ee2a8" letter-spacing="0.05em">AUDIT PROOF</text>
+    <text x="24" y="66" font-family="'Inter', -apple-system, sans-serif" font-size="18" font-weight="600" fill="#ffffff">0G Storage</text>
+  </g>
+
+  <!-- Network Note -->
+  <text x="100" y="585" font-family="'Inter', -apple-system, sans-serif" font-size="13" fill="#666666">
+    Deployed on Ethereum Sepolia (11155111) · 0G Galileo Testnet
+  </text>
+</svg>
