@@ -141,26 +141,26 @@ AegisNet separates autonomous agent operations from human-in-the-loop authorizat
 
 | Contract | Address | Role |
 | :--- | :--- | :--- |
-| **AegisSubnameRegistry** | [`0x48EEFC9F26181Bd059daCc3EF9fD70F197145373`](https://sepolia.etherscan.io/address/0x48EEFC9F26181Bd059daCc3EF9fD70F197145373) | Agent identities, owners, whitelists, limits, ENSIP-26 text records |
-| **AegisExecutionManager** | [`0xa7C668691382166eF71534a1996F60F6f218b887`](https://sepolia.etherscan.io/address/0xa7C668691382166eF71534a1996F60F6f218b887) | Request queue, Human Approval Gate, execution, cancellation |
-| **AegisSwapVMAdapter** | [`0x3fE49BC40C1f06d3D867ed6AaDA5b21a0cF4c611`](https://sepolia.etherscan.io/address/0x3fE49BC40C1f06d3D867ed6AaDA5b21a0cF4c611) | 1inch SwapVM opcode router (manager-only) |
-| **AegisUniswapAdapter** | [`0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E`](https://sepolia.etherscan.io/address/0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E) (SwapRouter02) | Real Uniswap V3 onchain swap execution adapter |
+| **AegisSubnameRegistry** | [`0x815893baD1708a201eEEAF226eeD576A7Ffea4BC`](https://sepolia.etherscan.io/address/0x815893baD1708a201eEEAF226eeD576A7Ffea4BC) | Agent identities, owners, whitelists, limits, ENSIP-26 text records |
+| **AegisExecutionManager** | [`0x8d5b392839300b487adDeeCc35F5BC534111CD33`](https://sepolia.etherscan.io/address/0x8d5b392839300b487adDeeCc35F5BC534111CD33) | Request queue, Human Approval Gate, execution, cancellation |
+| **AegisUniswapAdapter** | [`0xAaD03d978d84ccA70125F998b61ff7b539F565f4`](https://sepolia.etherscan.io/address/0xAaD03d978d84ccA70125F998b61ff7b539F565f4) | Real Uniswap V3 onchain swap execution adapter (routes to official SwapRouter02 `0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E`) |
+| **AegisSwapVMAdapter** | [`0xbd9e58d4a0e5987BC26f7898f9f66043bf9716C5`](https://sepolia.etherscan.io/address/0xbd9e58d4a0e5987BC26f7898f9f66043bf9716C5) | 1inch SwapVM opcode router [OUT OF SCOPE] |
 
-- **Deployer, protocol owner and relayer signer:** [`0x9eeAb92431FD385981735dbF5B949b6C4c2eBC39`](https://sepolia.etherscan.io/address/0x9eeAb92431FD385981735dbF5B949b6C4c2eBC39)
-- **Deployment record:** [`contracts/deployment-config.json`](contracts/deployment-config.json), mirrored to [`backend/src/config/contracts.json`](backend/src/config/contracts.json)
+- **Deployer & protocol owner:** [`0xB6Ba1Be32B7cA2729551882B71E8F469D06510e6`](https://sepolia.etherscan.io/address/0xB6Ba1Be32B7cA2729551882B71E8F469D06510e6)
+- **Relayer signer (Human Approval Gate):** [`0x3C29CC205E4fb3e1cA6C89DECDFE5A5d4e46E799`](https://sepolia.etherscan.io/address/0x3C29CC205E4fb3e1cA6C89DECDFE5A5d4e46E799) (Decoupled from owner key; onchain verified via `AegisExecutionManager.relayerSigner`)
+- **Deployment record:** [`contracts/deployment-config.json`](contracts/deployment-config.json), mirrored to [`backend/src/config/contracts.json`](backend/src/config/contracts.json) and [`frontend/deployment-config.json`](frontend/deployment-config.json)
 
 ## 🔗 Live onchain proof
 
-Real transactions on Sepolia, made through these contracts by agent `agent1.aegisnet.eth`:
+Real transactions on Sepolia, executed through these contracts by agent `agent1.aegisnet.eth`:
 
-| What happened | Transaction |
+| What happened | Transaction / Link |
 | :--- | :--- |
-| Agent `agent1.aegisnet.eth` registered | [`0x3156c01b…6d4d`](https://sepolia.etherscan.io/tx/0x3156c01b0e9aad93714adc60d271e34aa53269517897c21cc7b1d703deb66d4d) |
-| $500 trade: under the threshold, executed in the same transaction | [`0x2e9c6287…1c1c`](https://sepolia.etherscan.io/tx/0x2e9c628703817b597085eea8f18ad83bb4af2911371ab4950326fbb1da9b6c1c) |
-| $5,000 trade: paused onchain for Human Approval Gate clearance | [`0x16dbde9f…0843`](https://sepolia.etherscan.io/tx/0x16dbde9f959b5888e73be12242c802d6edb449275f2b64c00094ede7d7890843) |
-| $5,000 trade: Human Approval Gate clearance recorded | [`0xe8727000…4a23`](https://sepolia.etherscan.io/tx/0xe8727000356eac97aaa3016fded601610d84c3d16f000599caf0be8503e84a23) |
-| $5,000 trade: executed after approval | [`0x464cbae2…a442`](https://sepolia.etherscan.io/tx/0x464cbae20084ce7b818e7e91e0ed5b0afc7614951dd1fcada3cd36a94a0ca442) |
-| $250 trade: under the threshold, executed in the same transaction | [`0xb97675a0…543f`](https://sepolia.etherscan.io/tx/0xb97675a0cebb90e74be8c23d13c44cb5f08087f511c40f6ea656d5ce3d50543f) |
+| **Low-value trade ($0.30 USD):** Auto-executed atomically in a single transaction without human intervention (< $1.00 threshold) | [`0x79640a20…b0dd`](https://sepolia.etherscan.io/tx/0x79640a20abab184f469218c0774b4c809e1944f3fe6bcab771f21f42ffccb0dd) |
+| **High-value trade ($3.00 USD):** Paused onchain awaiting Human Approval Gate clearance (>= $1.00 threshold) | [`0xd5304686…2f42`](https://sepolia.etherscan.io/tx/0xd530468647deee80ddb3a3a4836894aa1b08b4d28159eb313dfcc47ebda32f42) |
+| **High-value trade approved & executed:** World ID nullifier attestation signed by relayer and executed via `approveWithRelayer` | [`0x6d7a5084…a596`](https://sepolia.etherscan.io/tx/0x6d7a5084f3b842d5bf0280b9b38928429d4c9853966a3fb8fa722cf4679ca596) |
+| **Denied trade cancelled:** User denies verification; request is cancelled onchain via `cancelRequest` leaving trade unexecuted | [`0xaea034eff…35a2`](https://sepolia.etherscan.io/tx/0xaea034effa80f025a480c9e0754704c32558ae1291111075717acf07a9a835a2) |
+| **Expired trade rejected:** Request past 15-minute deadline rejects approval onchain (`AegisManager: deadline expired`) | Request `0x428e6feccb66c567acffb0909bcea55e85e1e93865c448ce67fd79e8491a1209` (`isExecuted = false`) |
 
 ---
 
