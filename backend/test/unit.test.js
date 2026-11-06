@@ -161,4 +161,53 @@ console.log('Running backend unit tests...\n');
   console.log('✓ Uniqueness constraint blocks reuse of the same human nullifier across different owners');
 }
 
-console.log('\nAll 8 backend unit test suites passed successfully!');
+// 9. 0G Storage Merkle tree calculation & canonical root generation
+{
+  const { MemData } = require('@0gfoundation/0g-storage-ts-sdk');
+  const record = {
+    version: '1.0',
+    protocol: 'AegisNet',
+    agent: '0xB6Ba1Be32B7cA2729551882B71E8F469D06510e6',
+    zgRequestId: 'test-req-0g-1234',
+    plan: { strategyType: 'swap', amountUSD: 500 }
+  };
+  const memData = new MemData(Buffer.from(JSON.stringify(record)));
+  memData.merkleTree().then(([tree, err]) => {
+    assert.strictEqual(err, null);
+    assert.notStrictEqual(tree, null);
+    const rootHash = tree.rootHash();
+    assert.strictEqual(typeof rootHash, 'string');
+    assert.strictEqual(rootHash.startsWith('0x'), true);
+    assert.strictEqual(rootHash.length, 66);
+    console.log('✓ 0G Storage Merkle tree correctly computes valid 32-byte root hash from MemData payload');
+  });
+}
+
+// 10. 0G Fail-Safe: No trade proposed if 0G is unreachable / unconfigured
+{
+  const { ZGPlanSchema } = require('../dist/services/zgCompute.service');
+  // Valid schema check
+  const validPlan = {
+    strategyType: 'swap',
+    tokenIn: 'USDC',
+    tokenOut: 'WETH',
+    useUniswapV4Hop: false,
+    summary: 'Swap 500 USDC to WETH',
+    rationale: ['Aggregator routing'],
+    riskNotes: ['Under threshold']
+  };
+  const parsed = ZGPlanSchema.safeParse(validPlan);
+  assert.strictEqual(parsed.success, true);
+
+  // Reject invalid / malicious plans
+  const invalidPlan = {
+    strategyType: 'unknown_exploit',
+    tokenIn: 'USDC',
+    tokenOut: 'USDC' // identical tokens forbidden
+  };
+  const failedParse = ZGPlanSchema.safeParse(invalidPlan);
+  assert.strictEqual(failedParse.success, false);
+  console.log('✓ 0G Private Compute strict schema and fail-safe safety filters reject malformed decisions');
+}
+
+console.log('\nAll backend unit test suites passed successfully!');

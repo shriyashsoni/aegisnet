@@ -166,6 +166,24 @@ Real transactions on Sepolia, executed through these contracts by agent `agent1.
 
 ## 🤝 Integrations
 
+### 🌐 0G Integration: Verifiable AI Compute & Decentralized Audit Storage
+
+AegisNet integrates **0G (Zero Gravity)** across the agent execution lifecycle:
+
+* **0G Private Compute (TEE-Attested AI Planner):**
+  * When `PLANNER_PROVIDER=0g`, strategy formulation runs inside 0G Private Compute using the OpenAI-compatible API (`https://router-api.0g.ai/v1/chat/completions`) with TEE-attested models (`0gm-1.0-35b-a3b`).
+  * Every call captures a unique gateway Request ID (`x-request-id`) surfaced in the UI and persisted to storage.
+  * **Fail-Safe Protocol:** If 0G Private Compute is unreachable or fails, no trade proposal is created (never fakes decisions).
+
+* **0G Storage (Immutable Decision Audit Trail):**
+  * After each planned or executed trade, a canonical decision record (agent, plan, risk checks, approval status, tx hash, 0G request ID) is formatted and published to 0G Storage via `@0gfoundation/0g-storage-ts-sdk`.
+  * Computes an immutable Merkle tree and commits the root hash to 0G Galileo Testnet via the onchain Flow contract (`0x22e03a6a89b950f1c82ec5e74f8eca321a105296`).
+  * Live verified proof:
+    * **0G Request ID:** `b9fed9317fd4977c`
+    * **0G Storage Merkle Root:** [`0xc9d5549ae5460e519da8ecf0c4a3ef9e954130f20ab26fb101d88969563a213d`](https://storagescan.0g.ai/file/0xc9d5549ae5460e519da8ecf0c4a3ef9e954130f20ab26fb101d88969563a213d)
+    * **0G Flow Tx Hash:** `0x3d15ad53186ba14cbe29947be4718a915aeabecaaa2baf3018579da7c4c09f5a`
+  * Reproducible script: `node --experimental-strip-types scripts/prove-0g.ts`. Full report in [`docs/0G.md`](docs/0G.md).
+
 ### 🛡️ Human Approval Gate: Cryptographic Human-in-the-Loop Clearance
 - **Approval Gateway:** Relayer attestation verifies human authorization for paused transactions exceeding an agent's configured threshold.
 - **Single-Use Nullifiers:** The contract enforces `usedNullifiers[nullifierHash] = true`, ensuring an approval signature cannot be replayed for subsequent trades.
