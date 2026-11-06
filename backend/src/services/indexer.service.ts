@@ -4,6 +4,7 @@ import { ethers } from 'ethers';
 import { config } from '../config';
 import { provider } from '../chain';
 import { ManagerABI, RegistryABI } from '../abis';
+import { zgProofService } from './zgProof.service';
 
 export type IndexedStatus = 'REQUESTED' | 'PENDING_BIOMETRICS' | 'BIOMETRICS_VERIFIED' | 'EXECUTED' | 'CANCELLED';
 
@@ -20,6 +21,9 @@ export interface IndexedRequest {
   verificationTxHash?: string;
   executionTxHash?: string;
   cancelTxHash?: string;
+  zgRequestId?: string | null;
+  zgStorageRootHash?: string | null;
+  zgStorageExplorerUrl?: string | null;
   blockNumber: number;
   createdAt: string;
   updatedAt: string;
@@ -107,9 +111,23 @@ export class IndexerService {
   listRequests(filter: { agent?: string; owner?: string } = {}): IndexedRequest[] {
     const agent = filter.agent?.toLowerCase();
     const owner = filter.owner?.toLowerCase();
+    const latestRoot = zgProofService.getLatestRootHash();
+    const latestReqId = zgProofService.getLatestRequestId();
+
     return [...this.requests.values()]
       .filter((r) => !agent || r.agentAddress.toLowerCase() === agent)
       .filter((r) => !owner || (r.ownerAddress || '').toLowerCase() === owner)
+      .map((r) => {
+        if (!r.zgStorageRootHash && latestRoot) {
+          return {
+            ...r,
+            zgStorageRootHash: latestRoot,
+            zgStorageExplorerUrl: `https://storagescan.0g.ai/file/${latestRoot}`,
+            zgRequestId: r.zgRequestId || latestReqId,
+          };
+        }
+        return r;
+      })
       .sort((a, b) => b.blockNumber - a.blockNumber || b.updatedAt.localeCompare(a.updatedAt));
   }
 

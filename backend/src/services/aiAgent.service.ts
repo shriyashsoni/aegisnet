@@ -6,6 +6,8 @@ import { config } from '../config';
 import { isRpcUnavailable } from '../chain';
 import { HttpError } from '../validate';
 import { claudePlanner } from './claudePlanner.service';
+import { zgComputeService } from './zgCompute.service';
+import { zgStorageService } from './zgStorage.service';
 
 /** Ethereum mainnet token addresses (used for encoding and 1inch quotes) */
 export const TOKENS: Record<string, { address: string; decimals: number; stable: boolean }> = {
@@ -149,15 +151,6 @@ export class AIAgentService {
     // builds the calldata, so the model can never produce arbitrary transactions.
     const forcedIn = opts.tokenInSymbol ? normalizeSymbol(opts.tokenInSymbol) : undefined;
     const forcedOut = opts.tokenOutSymbol ? normalizeSymbol(opts.tokenOutSymbol) : undefined;
-    const aiPlan = await claudePlanner.plan({
-      goalPrompt,
-      amountUSD,
-      tokenInSymbol: forcedIn,
-      tokenOutSymbol: forcedOut,
-      approvalThresholdUSD: thresholdUSD,
-      dailyLimitUSD: permissions?.dailySpendingLimitUSD,
-      spentTodayUSD: permissions?.currentDailySpentUSD,
-    });
 
     let strategyType: StrategyType;
     let tokenIn: string;
@@ -166,18 +159,68 @@ export class AIAgentService {
     let rationale: string[];
     let summary: string;
     let riskNotes: string[] = [];
+    let planner: '0g' | 'claude' | 'rules' = 'rules';
+    let plannerModel: string | undefined = undefined;
+    let zgRequestId: string | null = null;
 
-    if (aiPlan) {
-      strategyType = aiPlan.strategyType;
-      tokenIn = forcedIn || aiPlan.tokenIn;
-      tokenOut = forcedOut || aiPlan.tokenOut;
+    if (config.plannerProvider === '0g') {
+      // 0G Private Compute is the planner provider in the main flow.
+      // Must go through 0G. If unreachable or failing, FAILS SAFE: throws HttpError so no trade is proposed.
+      const zgRes = await zgComputeService.plan({
+        goalPrompt,
+        amountUSD,
+        tokenInSymbol: forcedIn,
+        tokenOutSymbol: forcedOut,
+        approvalThresholdUSD: thresholdUSD,
+        dailyLimitUSD: permissions?.dailySpendingLimitUSD,
+        spentTodayUSD: permissions?.currentDailySpentUSD,
+      });
+
+      planner = '0g';
+      plannerModel = zgRes.model;
+      zgRequestId = zgRes.requestId;
+      strategyType = zgRes.plan.strategyType;
+      tokenIn = forcedIn || zgRes.plan.tokenIn;
+      tokenOut = forcedOut || zgRes.plan.tokenOut;
       if (!TOKENS[tokenIn] || !TOKENS[tokenOut] || tokenIn === tokenOut) {
         throw new HttpError(400, `Unsupported or identical token pair ${tokenIn}/${tokenOut}`);
       }
-      useUniswapV4Hop = strategyType !== 'aqua_position' && aiPlan.useUniswapV4Hop;
-      rationale = aiPlan.rationale;
-      summary = aiPlan.summary;
-      riskNotes = aiPlan.riskNotes;
+      useUniswapV4Hop = strategyType !== 'aqua_position' && Boolean(zgRes.plan.useUniswapV4Hop);
+      rationale = zgRes.plan.rationale;
+      summary = zgRes.plan.summary;
+      riskNotes = zgRes.plan.riskNotes;
+    } else if (config.plannerProvider === 'claude') {
+      const aiPlan = await claudePlanner.plan({
+        goalPrompt,
+        amountUSD,
+        tokenInSymbol: forcedIn,
+        tokenOutSymbol: forcedOut,
+        approvalThresholdUSD: thresholdUSD,
+        dailyLimitUSD: permissions?.dailySpendingLimitUSD,
+        spentTodayUSD: permissions?.currentDailySpentUSD,
+      });
+
+      if (aiPlan) {
+        planner = 'claude';
+        plannerModel = claudePlanner.model;
+        strategyType = aiPlan.strategyType;
+        tokenIn = forcedIn || aiPlan.tokenIn;
+        tokenOut = forcedOut || aiPlan.tokenOut;
+        if (!TOKENS[tokenIn] || !TOKENS[tokenOut] || tokenIn === tokenOut) {
+          throw new HttpError(400, `Unsupported or identical token pair ${tokenIn}/${tokenOut}`);
+        }
+        useUniswapV4Hop = strategyType !== 'aqua_position' && aiPlan.useUniswapV4Hop;
+        rationale = aiPlan.rationale;
+        summary = aiPlan.summary;
+        riskNotes = aiPlan.riskNotes;
+      } else {
+        const rules = this.interpretGoal(goalPrompt, opts);
+        ({ strategyType, tokenIn, tokenOut, useUniswapV4Hop, rationale } = rules);
+        summary = `${strategyType === 'aqua_position' ? 'Deposit' : 'Swap'} $${amountUSD.toLocaleString('en-US')} of ${tokenIn}${
+          strategyType === 'aqua_position' ? ' into a 1inch Aqua position' : ` into ${tokenOut}`
+        }${useUniswapV4Hop ? ' through the agent-gated Uniswap v4 hook' : ''}.`;
+        if (requiresBiometrics) riskNotes.push(`At or above the $${thresholdUSD.toLocaleString('en-US')} threshold, so the owner must approve with World ID.`);
+      }
     } else {
       const rules = this.interpretGoal(goalPrompt, opts);
       ({ strategyType, tokenIn, tokenOut, useUniswapV4Hop, rationale } = rules);
@@ -186,6 +229,7 @@ export class AIAgentService {
       }${useUniswapV4Hop ? ' through the agent-gated Uniswap v4 hook' : ''}.`;
       if (requiresBiometrics) riskNotes.push(`At or above the $${thresholdUSD.toLocaleString('en-US')} threshold, so the owner must approve with World ID.`);
     }
+
     rationale = [...rationale, ...checks];
 
     const inAddr = TOKENS[tokenIn].address;
@@ -200,11 +244,34 @@ export class AIAgentService {
 
     const quote = await this.quote(tokenIn, tokenOut, amountUSD);
 
+    // Write 0G Storage Decision Record (audit trail on 0G decentralized storage)
+    const storageResult = await zgStorageService.publishDecisionRecord({
+      version: '1.0',
+      protocol: 'AegisNet',
+      timestamp: new Date().toISOString(),
+      agent: agentAddress,
+      agentSubname,
+      zgRequestId,
+      plan: {
+        strategyType,
+        summary,
+        tokenIn,
+        tokenOut,
+        amountUSD,
+        usesUniswapV4Hop: useUniswapV4Hop,
+      },
+      riskChecks: rationale,
+      approvalStatus: requiresBiometrics ? 'PENDING_HUMAN_APPROVAL' : 'AUTO_APPROVED',
+    });
+
     const proposal: TradeStrategyProposal = {
       strategyId: `strat_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       strategyType,
-      planner: aiPlan ? 'claude' : 'rules',
-      plannerModel: aiPlan ? claudePlanner.model : undefined,
+      planner,
+      plannerModel,
+      zgRequestId,
+      zgStorageRootHash: storageResult.rootHash,
+      zgStorageExplorerUrl: storageResult.explorerUrl,
       summary,
       rationale,
       riskNotes,

@@ -15,6 +15,8 @@ import ensRoutes from './routes/ens.routes';
 import worldidRoutes from './routes/worldid.routes';
 import executionRoutes from './routes/execution.routes';
 import uniswapRoutes from './routes/uniswap.routes';
+import zgRoutes from './routes/zg.routes';
+import { zgProofService } from './services/zgProof.service';
 
 const app = express();
 app.disable('x-powered-by');
@@ -79,7 +81,12 @@ app.get('/api/health', async (_req, res) => {
     relayer: { address: signerAddress, matchesContract: checks.relayerOk, onchain: checks.relayerOnchain },
     uniswapRouter: checks.uniswapRouter,
     approvalGate: 'Human Approval Gate (World ID 2FA)',
-    ai: { enabled: claudePlanner.enabled, model: claudePlanner.enabled ? claudePlanner.model : null },
+    ai: {
+      provider: config.plannerProvider,
+      enabled: config.plannerProvider === '0g' ? Boolean(config.zgComputeApiKey) : claudePlanner.enabled,
+      model: config.plannerProvider === '0g' ? config.zgComputeModel : (claudePlanner.enabled ? claudePlanner.model : null),
+    },
+    zg: zgProofService.getStatus(),
     oneInchQuotes: Boolean(config.oneInchApiKey),
     adminRoutes: config.adminApiKey ? 'api-key' : config.isProduction ? 'disabled' : 'open (development)',
     indexer: indexer.status(),
@@ -102,6 +109,7 @@ app.use('/api/worldid', worldidRoutes);
 app.use('/api/approval', worldidRoutes);
 app.use('/api/execution', executionRoutes);
 app.use('/api/uniswap', uniswapRoutes);
+app.use('/api/zg', zgRoutes);
 
 app.use('/api', (_req, _res, next) => next(new HttpError(404, 'API route not found')));
 

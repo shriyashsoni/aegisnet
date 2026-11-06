@@ -4,6 +4,7 @@ import { wallet, signerAddress, sendTx, chainError } from '../chain';
 import { ManagerABI } from '../abis';
 import { AIAgentService, StrategyOptions } from './aiAgent.service';
 import { indexer } from './indexer.service';
+import { zgStorageService } from './zgStorage.service';
 import { HttpError, usdToWei } from '../validate';
 
 /**
@@ -50,11 +51,34 @@ export class ExecutionService {
       .find((parsed) => parsed?.name === 'ExecutionRequested');
     if (!event) throw new HttpError(502, `Transaction ${receipt.hash} did not emit ExecutionRequested`);
 
+    // Write post-request decision record with transaction hash to 0G Storage
+    const storageRes = await zgStorageService.publishDecisionRecord({
+      version: '1.0',
+      protocol: 'AegisNet',
+      timestamp: new Date().toISOString(),
+      agent: agentAddress,
+      agentSubname: proposal.agentSubname,
+      zgRequestId: proposal.zgRequestId,
+      plan: {
+        strategyType: proposal.strategyType,
+        summary: proposal.summary,
+        tokenIn: proposal.tokenInSymbol,
+        tokenOut: proposal.tokenOutSymbol,
+        amountUSD: valueUSD,
+        usesUniswapV4Hop: proposal.usesUniswapV4Hop,
+      },
+      riskChecks: proposal.rationale,
+      approvalStatus: Boolean(event.args.requiresBiometrics) ? 'PENDING_HUMAN_APPROVAL' : 'AUTO_APPROVED',
+      txHash: receipt.hash,
+    });
+
     await indexer.refresh().catch(() => undefined);
     return {
       requestId: String(event.args.requestId),
       requiresBiometrics: Boolean(event.args.requiresBiometrics),
       txHash: receipt.hash,
+      zgRequestId: proposal.zgRequestId,
+      zgStorageRootHash: storageRes.rootHash,
       proposal,
     };
   }
