@@ -260,10 +260,17 @@
   function loadHealth() {
     return resolveApi().then(function (h) {
       renderHealth(h);
+      loadWorldIDConfig();
       if (!Chain.ready()) {
         return api('/api/abis').then(function (abis) { Chain.init(h, abis); });
       }
     }, renderOffline);
+  }
+
+  function loadWorldIDConfig() {
+    return api('/api/worldid/config').then(function (res) {
+      if (res && res.success) state.worldId = res;
+    }).catch(function () {});
   }
 
   $('#refresh-health').addEventListener('click', function () {
@@ -775,23 +782,36 @@
   });
 
   // ---------------------------------------------------------------------------
-  // Human Approval Gate
+  // ---------------------------------------------------------------------------
+  // Human Approval Gate & World ID 2FA
   // ---------------------------------------------------------------------------
   var modal = $('#worldid-modal');
 
   function openApproval(req) {
     state.approval = req;
+    var wid = state.worldId || {};
+    var mode = wid.mode || 'cloud';
+    var level = wid.verificationLevel || 'device';
+
+    if ($('#wid-mode-badge')) {
+      $('#wid-mode-badge').textContent = mode === 'dev'
+        ? '● Dev Mode (Simulated Proof)'
+        : '● World ID (' + level.toUpperCase() + ' Level)';
+    }
+
     $('#wid-prompt').textContent = 'A ' + usd(req.valueUSD) + ' trade by ' + (req.agentSubname || short(req.agentAddress)) +
       ' is paused onchain. Authorize it via the Human Approval Gate to approve.';
     $('#wid-meta').innerHTML =
       '<dt>Request</dt><dd class="mono">' + esc(short(req.requestId, 12, 6)) + '</dd>' +
       '<dt>Trade Value</dt><dd>' + usd(req.valueUSD) + '</dd>' +
       '<dt>Agent</dt><dd>' + esc(req.agentSubname || short(req.agentAddress)) + '</dd>' +
-      '<dt>Security Gate</dt><dd class="mono" style="color:#4ade80">Human-in-the-Loop 2FA</dd>';
+      '<dt>Security Gate</dt><dd class="mono" style="color:#4ade80">' + (mode === 'dev' ? 'Local Relayer Attestation' : 'World ID Proof-of-Humanity') + '</dd>';
     $('#wid-steps').hidden = true;
     $('#wid-steps').innerHTML = '';
-    $('#wid-verify').textContent = 'Authorize Execution';
-    $('#wid-hint').innerHTML = 'Generates an authorization attestation via the Human Approval Gate and unlocks execution on Sepolia.';
+    $('#wid-verify').textContent = mode === 'dev' ? 'Authorize Execution (Dev Mode)' : 'Verify with World ID';
+    $('#wid-hint').innerHTML = mode === 'dev'
+      ? 'Generates an authorization attestation via the local relayer and unlocks execution on Sepolia.'
+      : 'Triggers World ID verification (Orb or Device) to issue a single-use nullifier attestation on Sepolia.';
     $('#wid-verify').disabled = false;
     $('#wid-cancel').disabled = false;
     modal.hidden = false;
@@ -806,6 +826,9 @@
       body: {
         requestId: requestId,
         nullifier_hash: nullifier,
+        proof: result && result.proof,
+        merkle_root: result && result.merkle_root,
+        verification_level: result && result.verification_level,
       },
     });
   }
@@ -845,9 +868,37 @@
     if (!req) return;
     try { requireWallet(); } catch (err) { return toast(err.message, 'err'); }
     var btn = this;
+    var wid = state.worldId || {};
+
+    if (window.IDKit && wid.appId && wid.mode !== 'dev') {
+      try {
+        busy(btn, true, 'Opening World ID…');
+        IDKit.init({
+          app_id: wid.appId,
+          action: wid.action || 'agent-high-value-auth',
+          signal: req.requestId,
+          verification_level: wid.verificationLevel || 'device',
+          handleVerify: function (result) {
+            return attest(req.requestId, result);
+          },
+          onSuccess: function (result) {
+            busy(btn, false);
+            toast('World ID proof verified', 'ok');
+            finishApproval(req, result);
+          },
+          onError: function (err) {
+            busy(btn, false);
+            toast('World ID verification error: ' + (err.message || err), 'err');
+          }
+        });
+        IDKit.open();
+        return;
+      } catch (idkErr) {
+        console.warn('IDKit standalone open error, falling back to direct relayer attestation:', idkErr);
+      }
+    }
 
     busy(btn, true, 'Authorizing…');
-
     attest(req.requestId, {}).then(function (att) {
       busy(btn, false);
       toast('Human approval attested', 'ok');
