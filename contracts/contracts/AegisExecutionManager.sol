@@ -20,6 +20,8 @@ contract AegisExecutionManager {
     // Track used nullifiers to prevent replay attacks
     mapping(uint256 => bool) public usedNullifiers;
 
+    uint256 public constant EXECUTION_EXPIRY_DURATION = 15 minutes;
+
     // Pending Execution Request for Human Approval Interception
     struct ExecutionRequest {
         bytes32 requestId;
@@ -28,6 +30,7 @@ contract AegisExecutionManager {
         bytes callData;
         uint256 valueUSD;
         uint256 createdAt;
+        uint256 deadline;
         bool isVerified;
         bool isExecuted;
         bool isCancelled;
@@ -123,6 +126,7 @@ contract AegisExecutionManager {
             callData: callData,
             valueUSD: valueUSD,
             createdAt: block.timestamp,
+            deadline: block.timestamp + EXECUTION_EXPIRY_DURATION,
             isVerified: !biometricReq, // Pre-verified if below threshold
             isExecuted: false,
             isCancelled: false
@@ -153,6 +157,7 @@ contract AegisExecutionManager {
         require(req.requestId != bytes32(0), "AegisManager: non-existent request");
         require(!req.isExecuted, "AegisManager: already executed");
         require(!req.isCancelled, "AegisManager: request cancelled");
+        require(block.timestamp <= req.deadline, "AegisManager: request expired");
         require(!usedNullifiers[nullifierHash], "AegisManager: nullifier used");
 
         bytes32 hash = keccak256(abi.encodePacked(requestId, nullifierHash, address(this), block.chainid));
@@ -186,13 +191,14 @@ contract AegisExecutionManager {
         require(req.isVerified, "AegisManager: pending human approval");
         require(!req.isExecuted, "AegisManager: request already executed");
         require(!req.isCancelled, "AegisManager: request cancelled");
+        require(block.timestamp <= req.deadline, "AegisManager: request expired");
 
         (, , bytes32 subnameNode) = registry.isAgentAuthorized(req.agentAddress, req.targetContract, req.valueUSD);
         return _executeTransaction(requestId, subnameNode);
     }
 
     /**
-     * @notice Cancel pending execution (human owner fallback path)
+     * @notice Cancel pending execution (human owner fallback path or anyone if expired)
      */
     function cancelExecution(bytes32 requestId) external {
         ExecutionRequest storage req = executionRequests[requestId];
@@ -202,7 +208,11 @@ contract AegisExecutionManager {
         (, , bytes32 subnameNode) = registry.isAgentAuthorized(req.agentAddress, req.targetContract, req.valueUSD);
         IAegisSubnameRegistry.AgentPermissions memory perm = registry.getAgentPermissions(subnameNode);
 
-        require(msg.sender == perm.ownerAddress || msg.sender == owner || msg.sender == perm.agentAddress, "AegisManager: unauthorized cancel");
+        bool isExpired = block.timestamp > req.deadline;
+        require(
+            isExpired || msg.sender == perm.ownerAddress || msg.sender == owner || msg.sender == perm.agentAddress,
+            "AegisManager: unauthorized cancel"
+        );
 
         req.isCancelled = true;
         emit ExecutionCancelled(requestId);
@@ -230,7 +240,7 @@ contract AegisExecutionManager {
      */
     function isRequestPending(bytes32 requestId) external view returns (bool) {
         ExecutionRequest storage req = executionRequests[requestId];
-        return req.requestId != bytes32(0) && !req.isVerified && !req.isExecuted && !req.isCancelled;
+        return req.requestId != bytes32(0) && !req.isVerified && !req.isExecuted && !req.isCancelled && block.timestamp <= req.deadline;
     }
 
     /**
@@ -238,7 +248,15 @@ contract AegisExecutionManager {
      */
     function isRequestReadyForExecution(bytes32 requestId) external view returns (bool) {
         ExecutionRequest storage req = executionRequests[requestId];
-        return req.requestId != bytes32(0) && req.isVerified && !req.isExecuted && !req.isCancelled;
+        return req.requestId != bytes32(0) && req.isVerified && !req.isExecuted && !req.isCancelled && block.timestamp <= req.deadline;
+    }
+
+    /**
+     * @notice Returns true if request has exceeded its deadline and can be cancelled by anyone
+     */
+    function isRequestExpired(bytes32 requestId) external view returns (bool) {
+        ExecutionRequest storage req = executionRequests[requestId];
+        return req.requestId != bytes32(0) && block.timestamp > req.deadline && !req.isExecuted;
     }
 
     /**

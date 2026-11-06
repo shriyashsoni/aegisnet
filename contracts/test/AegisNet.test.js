@@ -546,6 +546,68 @@ describe("AegisNet Matrix Core Protocol Tests", function () {
       await executionManager.connect(user).approveWithRelayer(requestId, nullifier, userSig);
       expect(await executionManager.isRequestReadyForExecution(requestId)).to.be.true;
     });
+
+    it("Should expire pending high-value executions after 15 minutes and allow anyone to cancel them", async function () {
+      const instructions = [{
+        opcode: 1,
+        tokenIn: await mockToken.getAddress(),
+        tokenOut: await mockToken.getAddress(),
+        amountIn: ethers.parseEther("2500"),
+        minAmountOut: ethers.parseEther("2450"),
+        extraData: "0x"
+      }];
+      const encodedCall = swapVMAdapter.interface.encodeFunctionData("executeSwapVMRoute", [
+        ethers.AbiCoder.defaultAbiCoder().encode(
+          ["tuple(uint8 opcode, address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, bytes extraData)[]"],
+          [instructions]
+        )
+      ]);
+
+      const tx = await executionManager.connect(agent).requestExecution(
+        await swapVMAdapter.getAddress(),
+        encodedCall,
+        ethers.parseEther("2500")
+      );
+      const receipt = await tx.wait();
+      const requestId = receipt.logs.find(log => log.fragment && log.fragment.name === "ExecutionRequested").args.requestId;
+
+      const reqDetails = await executionManager.getExecutionRequest(requestId);
+      expect(reqDetails.deadline).to.equal(reqDetails.createdAt + 15n * 60n);
+      expect(await executionManager.isRequestPending(requestId)).to.be.true;
+      expect(await executionManager.isRequestExpired(requestId)).to.be.false;
+
+      // 1. Fast forward past 15 minutes (16 minutes)
+      await time.increase(16 * 60);
+
+      expect(await executionManager.isRequestPending(requestId)).to.be.false;
+      expect(await executionManager.isRequestExpired(requestId)).to.be.true;
+
+      // 2. Reject approval after expiry
+      const nullifier = 444333222;
+      const managerAddr = await executionManager.getAddress();
+      const network = await ethers.provider.getNetwork();
+      const messageHash = ethers.solidityPackedKeccak256(
+        ["bytes32", "uint256", "address", "uint256"],
+        [requestId, nullifier, managerAddr, network.chainId]
+      );
+      const sig = await relayer.signMessage(ethers.getBytes(messageHash));
+
+      await expect(
+        executionManager.connect(user).approveWithRelayer(requestId, nullifier, sig)
+      ).to.be.revertedWith("AegisManager: request expired");
+
+      // 3. Anyone (including an unrelated stranger / user) can cancel an expired request
+      const cancelTx = await executionManager.connect(user).cancelExecution(requestId);
+      await cancelTx.wait();
+
+      const afterCancel = await executionManager.getExecutionRequest(requestId);
+      expect(afterCancel.isCancelled).to.be.true;
+
+      // 4. Expired and cancelled request can never execute
+      await expect(
+        executionManager.connect(agent).executeVerifiedTransaction(requestId)
+      ).to.be.revertedWith("AegisManager: pending human approval");
+    });
   });
 
   describe("Phase IV: Uniswap v4 Agent-Gated Hook", function () {

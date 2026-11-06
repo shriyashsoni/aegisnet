@@ -13,6 +13,7 @@ interface IAegisExecutionManager {
         bytes callData;
         uint256 valueUSD;
         uint256 createdAt;
+        uint256 deadline;
         bool isVerified;
         bool isExecuted;
         bool isCancelled;
@@ -69,8 +70,12 @@ interface IAegisExecutionManager {
 
     function isRequestReadyForExecution(bytes32 requestId) external view returns (bool);
 
+    function isRequestExpired(bytes32 requestId) external view returns (bool);
+
     function isNullifierUsed(uint256 nullifierHash) external view returns (bool);
 
     function getExecutionRequest(bytes32 requestId) external view returns (ExecutionRequest memory);
+
+    function EXECUTION_EXPIRY_DURATION() external view returns (uint256);
 }
 
