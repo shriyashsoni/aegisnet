@@ -8,11 +8,11 @@ dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
 dotenv.config();
 
 const LOCAL_DEFAULTS = {
-  AegisSubnameRegistry: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
-  WorldIDVerifier: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
-  AegisExecutionManager: '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0',
-  AegisSwapVMAdapter: '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9',
-  AegisUniswapAdapter: '0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E',
+  AegisSubnameRegistry: '0x6Dbd89B71e8AB7BF93a9200C6fB81951699549FE',
+  WorldIDVerifier: '0x15f25Fc3261B8d3cFb23679B9E65f4D030501623',
+  AegisExecutionManager: '0x13d7b8Add8265AB1Cfdc3a6E8E60D1b3bcD56fa8',
+  AegisSwapVMAdapter: '0xb81b7Ec40eF275AA805Cb82D729498C47Ab64c60',
+  AegisUniswapAdapter: '0xD855719f7Cc2cD867540F8398E3d2Fa4b2dD8221',
 };
 
 // Precedence: local Hardhat defaults < deployed contracts.json < explicit CONTRACT_* env vars
@@ -35,6 +35,8 @@ for (const [key, value] of Object.entries(envOverrides)) {
 const deployedConfigPath = [
   path.resolve(__dirname, '../../../contracts/deployment-config.json'),
   path.resolve(__dirname, '../../contracts/deployment-config.json'),
+  path.resolve(process.cwd(), 'contracts/deployment-config.json'),
+  path.resolve(process.cwd(), 'backend/src/config/contracts.json'),
   path.join(__dirname, 'contracts.json'),
   path.resolve(__dirname, '../../src/config/contracts.json'),
 ].find((p) => fs.existsSync(p));
