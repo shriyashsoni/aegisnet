@@ -553,6 +553,11 @@
 </datalist>
 
 <script src="/vendor/ethers.umd.min.js"></script>
+<script>
+  if (typeof window.ethers === 'undefined') {
+    document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.5/ethers.umd.min.js"><\/script>');
+  }
+</script>
 <script src="wallet.js"></script>
 <script src="chain.js"></script>
 <script src="app.js"></script>

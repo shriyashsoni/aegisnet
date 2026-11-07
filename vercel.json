@@ -1,0 +1,37 @@
+{
+  "version": 2,
+  "cleanUrls": true,
+  "buildCommand": "cd backend && npm install && npm run build",
+  "functions": {
+    "api/index.ts": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/vendor/(.*)",
+      "destination": "/frontend/vendor/$1"
+    },
+    {
+      "source": "/app",
+      "destination": "/frontend/app.html"
+    },
+    {
+      "source": "/docs",
+      "destination": "/frontend/docs.html"
+    },
+    {
+      "source": "/whitepaper",
+      "destination": "/frontend/whitepaper.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/frontend/$1"
+    }
+  ]
+}

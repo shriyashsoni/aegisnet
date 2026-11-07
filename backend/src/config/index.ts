@@ -127,7 +127,7 @@ export const config = {
   zgStoragePrivateKey: realValue(process.env.ZG_STORAGE_PRIVATE_KEY) || realValue(process.env.PRIVATE_KEY) || realValue(process.env.RELAYER_PRIVATE_KEY),
   // First block to index; auto-detected from the manager's deployment when unset
   indexerStartBlock: process.env.INDEXER_START_BLOCK ? parseInt(process.env.INDEXER_START_BLOCK, 10) : deployedStartBlock,
-  dataDir: process.env.DATA_DIR || path.resolve(__dirname, '../../data'),
+  dataDir: process.env.DATA_DIR || (process.env.VERCEL ? '/tmp' : path.resolve(__dirname, '../../data')),
   proofOfOwnership: parseProofOfOwnership(process.env.PROOF_OF_OWNERSHIP),
   contracts: contractAddresses,
 };
