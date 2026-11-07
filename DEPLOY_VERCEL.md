@@ -150,3 +150,4 @@ After Vercel finishes deploying:
   - Verify your registered subname appears (e.g. `sidd.aegisnet.eth` or `shriyashdn.aegisnet.eth`).
   - Propose a trade via 0G AI Private Compute.
   - Approve or execute trade to verify end-to-end integration!
+
